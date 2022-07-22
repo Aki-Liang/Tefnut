@@ -2,6 +2,7 @@ package impl
 
 import (
 	commonDefines "Tefnut/common/defines"
+	commonTools "Tefnut/common/tools"
 	"Tefnut/configs"
 	"Tefnut/internal/domain/entity"
 	"Tefnut/internal/domain/repository"
@@ -103,6 +104,9 @@ func (impl *LibraryServiceImpl) ScanPath(ctx context.Context, path string, paren
 }
 
 func (impl *LibraryServiceImpl) createNode(ctx context.Context, node *entity.FileItem) (*entity.FileItem, error) {
+	if !node.ExtCorrect() {
+		return nil, errors.Errorf("failed to create file node %s, incorrect ext", node.Path)
+	}
 	retNode, err := impl.libRepository.CreateNode(ctx, node)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create file node %s", node.Path)
@@ -122,6 +126,7 @@ func (impl *LibraryServiceImpl) deleteNode(ctx context.Context, node *entity.Fil
 			continue
 		}
 	}
+	// TODO: delete tmp data [renzhi]
 	return impl.libRepository.DeleteNode(ctx, node.Id)
 }
 
@@ -135,4 +140,51 @@ func (impl *LibraryServiceImpl) listChildNodes(ctx context.Context, parentId int
 
 func (impl *LibraryServiceImpl) Query(ctx context.Context, condition *entity.LibraryQuery) (entity.FileItemList, int, error) {
 	return impl.libRepository.Query(ctx, condition)
+}
+
+func (impl *LibraryServiceImpl) GetContent(ctx context.Context, id int) (string, []string, error) {
+	node, err := impl.libRepository.GetNode(ctx, id)
+	if err != nil {
+		return "", nil, errors.Wrapf(err, "service:LibraryServiceImpl:GetContent GetNode failed, id:%v", id)
+	}
+
+	if node.FileType != commonDefines.FileItemTypeFile {
+		return "", nil, errors.Wrapf(err, "service:LibraryServiceImpl:GetContent node without content, id:%v", id)
+	}
+
+	tmpName := node.GetTmpName()
+	list, err := impl.getTmpFileList(ctx, tmpName)
+	if err != nil {
+		return "", nil, errors.Wrapf(err, "service:LibraryServiceImpl:GetContent getTmpFileList failed, id:%v", id)
+	}
+
+	return tmpName, list, nil
+}
+
+func (impl *LibraryServiceImpl) getTmpFileList(ctx context.Context, name string) ([]string, error) {
+	path := impl.conf.TempPath + "/" + name
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	exist, err := commonTools.PathExist(absPath)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]string, 0)
+	if exist {
+		//get
+		fileInfos, err := ioutil.ReadDir(absPath)
+		if err != nil {
+			return nil, err
+		}
+		for _, info := range fileInfos {
+			result = append(result, info.Name())
+		}
+	} else {
+		//unachive
+	}
+
+	return result, nil
 }

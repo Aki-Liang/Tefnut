@@ -28,3 +28,8 @@ type LibraryListResponse struct {
 	Total int                 `json:"total"`
 	Data  entity.FileItemList `json:"data"`
 }
+
+type ContentResponse struct {
+	TmpName string   `json:"url"`
+	Files   []string `json:"files"`
+}

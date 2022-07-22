@@ -5,6 +5,8 @@ import (
 	"Tefnut/internal/handler/handler_impl"
 	"context"
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
+	"strconv"
 )
 
 type TefnutHandler struct {
@@ -27,6 +29,16 @@ func (handler *TefnutHandler) LibList(c echo.Context) error {
 		handler.response(c, nil, err)
 	}
 	resp, err := handler.impl.LibraryList(context.Background(), req)
+	return handler.response(c, resp, err)
+}
+
+func (handler *TefnutHandler) LibContentGet(c echo.Context) error {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		handler.response(c, nil, errors.Errorf("incorrect input id:%v", idStr))
+	}
+	resp, err := handler.impl.LibraryContentGet(context.Background(), id)
 	return handler.response(c, resp, err)
 }
 

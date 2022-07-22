@@ -45,6 +45,18 @@ func (impl *LibraryRepositoryImpl) DeleteNode(ctx context.Context, id int) error
 	return nil
 }
 
+func (impl *LibraryRepositoryImpl) GetNode(ctx context.Context, id int) (*entity.FileItem, error) {
+	res := &do.FileItem{}
+	exist, err := impl.db.Table(do.TableNameFileItem).Where("id = ?", id).Get(res)
+	if err != nil {
+		return nil, errors.Wrapf(err, "repository:LibraryRepositoryImpl:GetNode failed, id: %v", id)
+	}
+	if !exist {
+		return nil, errors.Wrapf(err, "repository:LibraryRepositoryImpl:GetNode node not exists, id: %v ", id)
+	}
+	return convert.FileItemConverter.ToEntity(res), nil
+}
+
 func (impl *LibraryRepositoryImpl) Query(ctx context.Context, condition *entity.LibraryQuery) (entity.FileItemList, int, error) {
 	session := impl.db.NewSession()
 	defer session.Close()
