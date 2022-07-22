@@ -10,7 +10,7 @@ func NewTefnutHandlerImpl() *TefnutHandlerImpl {
 	return &TefnutHandlerImpl{}
 }
 
-func (impl *TefnutHandlerImpl) SetFSService(libService service.LibraryService) *TefnutHandlerImpl {
+func (impl *TefnutHandlerImpl) SetLibraryService(libService service.LibraryService) *TefnutHandlerImpl {
 	impl.libService = libService
 	return impl
 }

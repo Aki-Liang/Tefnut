@@ -19,8 +19,9 @@ func (item *FileItem) ExtCorrect() bool {
 	if item.FileType == commonDefines.FileItemTypeDirectory {
 		return true
 	}
-	switch filepath.Ext(item.Path) {
-	case "rar", "zip", "RAR", "ZIP":
+	ext := filepath.Ext(item.Path)
+	switch ext {
+	case ".rar", ".zip", ".RAR", ".ZIP":
 		return true
 	default:
 		return false
