@@ -1,8 +1,0 @@
-fileConfig:
-  rootPath: "./COMIC"
-  tempPath: "./tmp/"
-database:
-  name: "tefnut"
-  conn: "root:123456@(127.0.0.1:3306)/tefnut?charset=utf8mb4&interpolateParams=true"
-  max_open_conn: 0
-  max_idle_conn: 0

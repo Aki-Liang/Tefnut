@@ -11,33 +11,33 @@ import (
 	"path/filepath"
 )
 
-type FileService struct {
+type LibraryServiceImpl struct {
 	conf           *configs.FilesystemConfig
-	FileRepository repository.FilesystemRepository
+	FileRepository repository.LibraryRepository
 }
 
-func NewFileService() *FileService {
-	return &FileService{}
+func NewLibraryServiceImpl() *LibraryServiceImpl {
+	return &LibraryServiceImpl{}
 }
 
-func (impl *FileService) SetConfig(conf *configs.FilesystemConfig) *FileService {
+func (impl *LibraryServiceImpl) SetConfig(conf *configs.FilesystemConfig) *LibraryServiceImpl {
 	impl.conf = conf
 	return impl
 }
 
-func (impl *FileService) SetFileRepository(repository repository.FilesystemRepository) *FileService {
+func (impl *LibraryServiceImpl) SetLibraryRepository(repository repository.LibraryRepository) *LibraryServiceImpl {
 	impl.FileRepository = repository
 	return impl
 }
 
-func (impl *FileService) ScanRoot(ctx context.Context) error {
+func (impl *LibraryServiceImpl) ScanRoot(ctx context.Context) error {
 	if impl.conf == nil {
 		return errors.Errorf("config is not set")
 	}
 	return impl.ScanPath(ctx, impl.conf.RootPath, nil)
 }
 
-func (impl *FileService) ScanPath(ctx context.Context, path string, parentNode *entity.FileItem) error {
+func (impl *LibraryServiceImpl) ScanPath(ctx context.Context, path string, parentNode *entity.FileItem) error {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get abs path, path:%s", path)
@@ -102,7 +102,7 @@ func (impl *FileService) ScanPath(ctx context.Context, path string, parentNode *
 	return nil
 }
 
-func (impl *FileService) createNode(ctx context.Context, node *entity.FileItem) (*entity.FileItem, error) {
+func (impl *LibraryServiceImpl) createNode(ctx context.Context, node *entity.FileItem) (*entity.FileItem, error) {
 	retNode, err := impl.FileRepository.CreateNode(ctx, node)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create file node %s", node.Path)
@@ -110,7 +110,7 @@ func (impl *FileService) createNode(ctx context.Context, node *entity.FileItem) 
 	return retNode, nil
 }
 
-func (impl *FileService) deleteNode(ctx context.Context, node *entity.FileItem) error {
+func (impl *LibraryServiceImpl) deleteNode(ctx context.Context, node *entity.FileItem) error {
 	if node == nil {
 		return nil
 	}
@@ -125,7 +125,7 @@ func (impl *FileService) deleteNode(ctx context.Context, node *entity.FileItem) 
 	return impl.FileRepository.DeleteNode(ctx, node.Id)
 }
 
-func (impl *FileService) listChildNodes(ctx context.Context, parentId int) (entity.FileItemList, error) {
+func (impl *LibraryServiceImpl) listChildNodes(ctx context.Context, parentId int) (entity.FileItemList, error) {
 	nodes, err := impl.FileRepository.ListChildNodes(ctx, parentId)
 	if err != nil {
 		return entity.FileItemList{}, errors.Wrapf(err, "failed to list child nodes of %d", parentId)

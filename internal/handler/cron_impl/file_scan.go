@@ -6,14 +6,14 @@ import (
 )
 
 type FileScanCron struct {
-	fsService service.FilesystemService
+	fsService service.LibraryService
 }
 
 func NewFileScanCron() *FileScanCron {
 	return &FileScanCron{}
 }
 
-func (impl *FileScanCron) SetFSService(fsService service.FilesystemService) *FileScanCron {
+func (impl *FileScanCron) SetFSService(fsService service.LibraryService) *FileScanCron {
 	impl.fsService = fsService
 	return impl
 }
