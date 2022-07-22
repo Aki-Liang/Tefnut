@@ -1,9 +1,9 @@
 package handler
 
 import (
+	"Tefnut/internal/domain/dto"
 	"Tefnut/internal/handler/handler_impl"
 	"context"
-	"fmt"
 	"github.com/labstack/echo/v4"
 )
 
@@ -21,8 +21,12 @@ func (handler *TefnutHandler) SetImpl(impl *handler_impl.TefnutHandlerImpl) *Tef
 }
 
 func (handler *TefnutHandler) LibList(c echo.Context) error {
-	fmt.Println("do nothing")
-	resp, err := handler.impl.LibraryList(context.Background())
+	req := &dto.LibraryListRequest{}
+	err := c.Bind(req)
+	if err != nil {
+		handler.response(c, nil, err)
+	}
+	resp, err := handler.impl.LibraryList(context.Background(), req)
 	return handler.response(c, resp, err)
 }
 

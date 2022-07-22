@@ -3,14 +3,14 @@ package handler_impl
 import "Tefnut/internal/domain/service"
 
 type TefnutHandlerImpl struct {
-	fsService service.LibraryService
+	libService service.LibraryService
 }
 
 func NewTefnutHandlerImpl() *TefnutHandlerImpl {
 	return &TefnutHandlerImpl{}
 }
 
-func (impl *TefnutHandlerImpl) SetFSService(fsService service.LibraryService) *TefnutHandlerImpl {
-	impl.fsService = fsService
+func (impl *TefnutHandlerImpl) SetFSService(libService service.LibraryService) *TefnutHandlerImpl {
+	impl.libService = libService
 	return impl
 }

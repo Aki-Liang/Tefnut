@@ -12,8 +12,8 @@ import (
 )
 
 type LibraryServiceImpl struct {
-	conf           *configs.FilesystemConfig
-	FileRepository repository.LibraryRepository
+	conf          *configs.FilesystemConfig
+	libRepository repository.LibraryRepository
 }
 
 func NewLibraryServiceImpl() *LibraryServiceImpl {
@@ -26,7 +26,7 @@ func (impl *LibraryServiceImpl) SetConfig(conf *configs.FilesystemConfig) *Libra
 }
 
 func (impl *LibraryServiceImpl) SetLibraryRepository(repository repository.LibraryRepository) *LibraryServiceImpl {
-	impl.FileRepository = repository
+	impl.libRepository = repository
 	return impl
 }
 
@@ -103,7 +103,7 @@ func (impl *LibraryServiceImpl) ScanPath(ctx context.Context, path string, paren
 }
 
 func (impl *LibraryServiceImpl) createNode(ctx context.Context, node *entity.FileItem) (*entity.FileItem, error) {
-	retNode, err := impl.FileRepository.CreateNode(ctx, node)
+	retNode, err := impl.libRepository.CreateNode(ctx, node)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create file node %s", node.Path)
 	}
@@ -122,13 +122,17 @@ func (impl *LibraryServiceImpl) deleteNode(ctx context.Context, node *entity.Fil
 			continue
 		}
 	}
-	return impl.FileRepository.DeleteNode(ctx, node.Id)
+	return impl.libRepository.DeleteNode(ctx, node.Id)
 }
 
 func (impl *LibraryServiceImpl) listChildNodes(ctx context.Context, parentId int) (entity.FileItemList, error) {
-	nodes, err := impl.FileRepository.ListChildNodes(ctx, parentId)
+	nodes, err := impl.libRepository.ListChildNodes(ctx, parentId)
 	if err != nil {
 		return entity.FileItemList{}, errors.Wrapf(err, "failed to list child nodes of %d", parentId)
 	}
 	return nodes, nil
+}
+
+func (impl *LibraryServiceImpl) Query(ctx context.Context, condition *entity.LibraryQuery) (entity.FileItemList, int, error) {
+	return impl.libRepository.Query(ctx, condition)
 }

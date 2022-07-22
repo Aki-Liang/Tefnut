@@ -9,4 +9,5 @@ type LibraryRepository interface {
 	CreateNode(ctx context.Context, item *entity.FileItem) (*entity.FileItem, error)
 	ListChildNodes(ctx context.Context, parentId int) (entity.FileItemList, error)
 	DeleteNode(ctx context.Context, id int) error
+	Query(ctx context.Context, condition *entity.LibraryQuery) (entity.FileItemList, int, error)
 }
