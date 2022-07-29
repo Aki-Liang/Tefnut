@@ -14,3 +14,17 @@ func PathExist(path string) (bool, error) {
 
 	return false, err
 }
+
+func CreatePathIfNotExists(path string, mode os.FileMode) error {
+	exist, err := PathExist(path)
+	if err != nil {
+		return err
+	}
+	if !exist {
+		err = os.MkdirAll(path, mode)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
