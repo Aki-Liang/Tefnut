@@ -2,8 +2,11 @@ package entity
 
 import (
 	commonDefines "Tefnut/common/defines"
+	commonTools "Tefnut/common/tools"
+	"context"
 	"crypto/md5"
 	"fmt"
+	"io/ioutil"
 	"path/filepath"
 )
 
@@ -30,4 +33,36 @@ func (item *FileItem) ExtCorrect() bool {
 
 func (item *FileItem) GetTmpName() string {
 	return fmt.Sprintf("%x", md5.Sum([]byte(item.Path)))
+}
+
+func (item *FileItem) GetTmpFileList(ctx context.Context, tmpPath string) ([]string, error) {
+	path := tmpPath + "/" + item.GetTmpName()
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, err
+	}
+	exist, err := commonTools.PathExist(absPath)
+	if err != nil {
+		return nil, err
+	}
+
+	if !exist {
+		//unachive
+		err = commonTools.Archive(ctx, item.Path, path)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	//get file list
+	result := make([]string, 0)
+	fileInfos, err := ioutil.ReadDir(absPath)
+	if err != nil {
+		return nil, err
+	}
+	for _, info := range fileInfos {
+		result = append(result, info.Name())
+	}
+
+	return result, nil
 }

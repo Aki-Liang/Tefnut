@@ -2,7 +2,6 @@ package impl
 
 import (
 	commonDefines "Tefnut/common/defines"
-	commonTools "Tefnut/common/tools"
 	"Tefnut/configs"
 	"Tefnut/internal/domain/entity"
 	"Tefnut/internal/domain/repository"
@@ -152,39 +151,10 @@ func (impl *LibraryServiceImpl) GetContent(ctx context.Context, id int) (string,
 		return "", nil, errors.Wrapf(err, "service:LibraryServiceImpl:GetContent node without content, id:%v", id)
 	}
 
-	tmpName := node.GetTmpName()
-	list, err := impl.getTmpFileList(ctx, tmpName)
+	list, err := node.GetTmpFileList(ctx, impl.conf.TempPath)
 	if err != nil {
 		return "", nil, errors.Wrapf(err, "service:LibraryServiceImpl:GetContent getTmpFileList failed, id:%v", id)
 	}
 
-	return tmpName, list, nil
-}
-
-func (impl *LibraryServiceImpl) getTmpFileList(ctx context.Context, name string) ([]string, error) {
-	path := impl.conf.TempPath + "/" + name
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return nil, err
-	}
-	exist, err := commonTools.PathExist(absPath)
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]string, 0)
-	if exist {
-		//get
-		fileInfos, err := ioutil.ReadDir(absPath)
-		if err != nil {
-			return nil, err
-		}
-		for _, info := range fileInfos {
-			result = append(result, info.Name())
-		}
-	} else {
-		//unachive
-	}
-
-	return result, nil
+	return node.GetTmpName(), list, nil
 }
