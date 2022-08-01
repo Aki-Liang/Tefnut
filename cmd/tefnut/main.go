@@ -26,32 +26,39 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	engine.ShowSQL(true)
 
-	fsRepo := repository_impl.NewFileSystemRepository(engine)
-	fs := service_impl.NewFileService().SetConfig(app.Config.FsConfig).SetFileRepository(fsRepo)
+	//repository
+	fsRepo := repository_impl.NewLibraryRepositoryImpl(engine)
 
-	/*
-		cron
-	*/
-	fileScanCron := cron_impl.NewFileScanCron().
-		SetFSService(fs)
+	//service
+	libService := service_impl.NewLibraryServiceImpl().SetConfig(app.Config.FsConfig).SetLibraryRepository(fsRepo)
+
+	//cron
+	fileScanCron := cron_impl.NewFileScanCron().SetLibraryService(libService)
 	c := cron.New()
 	c.AddFunc("*/2 * * * *", fileScanCron.Scan) //for test now
 	c.Start()
 
-	/*
-		http
-	*/
-	tefnutHandlerImpl := handler_impl.NewTefnutHandlerImpl().
-		SetFSService(fs)
+	//http handler
+	tefnutHandlerImpl := handler_impl.NewTefnutHandlerImpl().SetLibraryService(libService)
 	tefnutHandler := handler.NewTefnutHandler().SetImpl(tefnutHandlerImpl)
+
 	e := echo.New()
+
 	// Middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+
 	// Routes
-	g := e.Group("/tefnut/api/v1")
+	root := e.Group("/tefnut")
+	root.Static("/resource", app.Config.FsConfig.TempPath)
+
+	g := root.Group("/api/v1")
+	// library
 	gLib := g.Group("/library")
-	gLib.GET("/list", tefnutHandler.LibList)
+	gLib.Any("/list", tefnutHandler.LibList)
+	gLib.GET("/content/:id", tefnutHandler.LibContentGet)
+
 	e.Logger.Fatal(e.Start(":8086"))
 }

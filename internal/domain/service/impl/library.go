@@ -11,33 +11,33 @@ import (
 	"path/filepath"
 )
 
-type FileService struct {
-	conf           *configs.FilesystemConfig
-	FileRepository repository.FilesystemRepository
+type LibraryServiceImpl struct {
+	conf          *configs.FilesystemConfig
+	libRepository repository.LibraryRepository
 }
 
-func NewFileService() *FileService {
-	return &FileService{}
+func NewLibraryServiceImpl() *LibraryServiceImpl {
+	return &LibraryServiceImpl{}
 }
 
-func (impl *FileService) SetConfig(conf *configs.FilesystemConfig) *FileService {
+func (impl *LibraryServiceImpl) SetConfig(conf *configs.FilesystemConfig) *LibraryServiceImpl {
 	impl.conf = conf
 	return impl
 }
 
-func (impl *FileService) SetFileRepository(repository repository.FilesystemRepository) *FileService {
-	impl.FileRepository = repository
+func (impl *LibraryServiceImpl) SetLibraryRepository(repository repository.LibraryRepository) *LibraryServiceImpl {
+	impl.libRepository = repository
 	return impl
 }
 
-func (impl *FileService) ScanRoot(ctx context.Context) error {
+func (impl *LibraryServiceImpl) ScanRoot(ctx context.Context) error {
 	if impl.conf == nil {
 		return errors.Errorf("config is not set")
 	}
 	return impl.ScanPath(ctx, impl.conf.RootPath, nil)
 }
 
-func (impl *FileService) ScanPath(ctx context.Context, path string, parentNode *entity.FileItem) error {
+func (impl *LibraryServiceImpl) ScanPath(ctx context.Context, path string, parentNode *entity.FileItem) error {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get abs path, path:%s", path)
@@ -102,15 +102,18 @@ func (impl *FileService) ScanPath(ctx context.Context, path string, parentNode *
 	return nil
 }
 
-func (impl *FileService) createNode(ctx context.Context, node *entity.FileItem) (*entity.FileItem, error) {
-	retNode, err := impl.FileRepository.CreateNode(ctx, node)
+func (impl *LibraryServiceImpl) createNode(ctx context.Context, node *entity.FileItem) (*entity.FileItem, error) {
+	if !node.ExtCorrect() {
+		return nil, errors.Errorf("failed to create file node %s, incorrect ext", node.Path)
+	}
+	retNode, err := impl.libRepository.CreateNode(ctx, node)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create file node %s", node.Path)
 	}
 	return retNode, nil
 }
 
-func (impl *FileService) deleteNode(ctx context.Context, node *entity.FileItem) error {
+func (impl *LibraryServiceImpl) deleteNode(ctx context.Context, node *entity.FileItem) error {
 	if node == nil {
 		return nil
 	}
@@ -122,13 +125,36 @@ func (impl *FileService) deleteNode(ctx context.Context, node *entity.FileItem) 
 			continue
 		}
 	}
-	return impl.FileRepository.DeleteNode(ctx, node.Id)
+	// TODO: delete tmp data [renzhi]
+	return impl.libRepository.DeleteNode(ctx, node.Id)
 }
 
-func (impl *FileService) listChildNodes(ctx context.Context, parentId int) (entity.FileItemList, error) {
-	nodes, err := impl.FileRepository.ListChildNodes(ctx, parentId)
+func (impl *LibraryServiceImpl) listChildNodes(ctx context.Context, parentId int) (entity.FileItemList, error) {
+	nodes, err := impl.libRepository.ListChildNodes(ctx, parentId)
 	if err != nil {
 		return entity.FileItemList{}, errors.Wrapf(err, "failed to list child nodes of %d", parentId)
 	}
 	return nodes, nil
+}
+
+func (impl *LibraryServiceImpl) Query(ctx context.Context, condition *entity.LibraryQuery) (entity.FileItemList, int, error) {
+	return impl.libRepository.Query(ctx, condition)
+}
+
+func (impl *LibraryServiceImpl) GetContent(ctx context.Context, id int) (string, []string, error) {
+	node, err := impl.libRepository.GetNode(ctx, id)
+	if err != nil {
+		return "", nil, errors.Wrapf(err, "service:LibraryServiceImpl:GetContent GetNode failed, id:%v", id)
+	}
+
+	if node.FileType != commonDefines.FileItemTypeFile {
+		return "", nil, errors.Wrapf(err, "service:LibraryServiceImpl:GetContent node without content, id:%v", id)
+	}
+
+	list, err := node.GetTmpFileList(ctx, impl.conf.TempPath)
+	if err != nil {
+		return "", nil, errors.Wrapf(err, "service:LibraryServiceImpl:GetContent getTmpFileList failed, id:%v", id)
+	}
+
+	return node.GetTmpName(), list, nil
 }

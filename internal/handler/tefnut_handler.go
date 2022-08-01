@@ -1,9 +1,12 @@
 package handler
 
 import (
+	"Tefnut/internal/domain/dto"
 	"Tefnut/internal/handler/handler_impl"
-	"fmt"
+	"context"
 	"github.com/labstack/echo/v4"
+	"github.com/pkg/errors"
+	"strconv"
 )
 
 type TefnutHandler struct {
@@ -20,7 +23,35 @@ func (handler *TefnutHandler) SetImpl(impl *handler_impl.TefnutHandlerImpl) *Tef
 }
 
 func (handler *TefnutHandler) LibList(c echo.Context) error {
-	fmt.Println("do nothing")
+	req := &dto.LibraryListRequest{}
+	err := c.Bind(req)
+	if err != nil {
+		handler.response(c, nil, err)
+	}
+	resp, err := handler.impl.LibraryList(context.Background(), req)
+	return handler.response(c, resp, err)
+}
 
-	return nil
+func (handler *TefnutHandler) LibContentGet(c echo.Context) error {
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		handler.response(c, nil, errors.Errorf("incorrect input id:%v", idStr))
+	}
+	resp, err := handler.impl.LibraryContentGet(context.Background(), id)
+	return handler.response(c, resp, err)
+}
+
+func (handler *TefnutHandler) response(c echo.Context, resp interface{}, err error) error {
+	if err != nil {
+		return c.JSON(200, map[string]interface{}{
+			"code":    -1,
+			"message": err.Error(),
+		})
+	}
+	return c.JSON(200, map[string]interface{}{
+		"code":    0,
+		"message": "success",
+		"data":    resp,
+	})
 }
