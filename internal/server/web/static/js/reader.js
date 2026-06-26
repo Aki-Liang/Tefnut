@@ -49,7 +49,9 @@ function patchMeta(payload) {
   fetch(`/api/comics/${id}`, {
     method: 'PATCH', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
-  });
+  }).then(r => {
+    if (!r.ok) alert('保存失败');
+  }).catch(() => alert('保存失败'));
 }
 authorInput.addEventListener('change', () => patchMeta({ author: authorInput.value }));
 ratingSel.addEventListener('change', () => patchMeta({ rating: parseInt(ratingSel.value, 10) }));
@@ -62,14 +64,16 @@ function renderTags(tags) {
     span.textContent = t.name + ' ';
     const x = document.createElement('button');
     x.textContent = '×';
-    x.onclick = () => fetch(`/api/comics/${id}/tags/${t.id}`, { method: 'DELETE' }).then(loadDetail);
+    x.onclick = () => fetch(`/api/comics/${id}/tags/${t.id}`, { method: 'DELETE' })
+      .then(r => { if (!r.ok) { alert('删除标签失败'); return; } loadDetail(); })
+      .catch(() => alert('删除标签失败'));
     span.appendChild(x);
     tagsBox.appendChild(span);
   });
 }
 
 function loadDetail() {
-  fetch(`/api/comics/${id}`).then(r => r.json()).then(j => renderTags(j.data.tags));
+  fetch(`/api/comics/${id}`).then(r => r.json()).then(j => renderTags(j.data.tags)).catch(() => {});
 }
 
 document.getElementById('addtag').addEventListener('submit', (e) => {
@@ -80,7 +84,11 @@ document.getElementById('addtag').addEventListener('submit', (e) => {
   fetch(`/api/comics/${id}/tags`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name })
-  }).then(() => { input.value = ''; loadDetail(); });
+  }).then(r => {
+    if (!r.ok) { alert('添加标签失败'); return; }
+    input.value = '';
+    loadDetail();
+  }).catch(() => alert('添加标签失败'));
 });
 
 loadDetail();

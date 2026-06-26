@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/labstack/echo/v4"
 
@@ -68,7 +69,7 @@ func (s *Server) apiAddTag(c echo.Context) error {
 	if name == "" {
 		return fail(c, http.StatusBadRequest, errors.New("tag name required"))
 	}
-	if len(name) > 64 {
+	if utf8.RuneCountInString(name) > 64 {
 		return fail(c, http.StatusBadRequest, errors.New("tag name too long"))
 	}
 	tag, err := s.tags.Upsert(ctx, name)
