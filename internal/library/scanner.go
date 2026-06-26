@@ -120,12 +120,12 @@ func (s *Scanner) buildComic(ctx context.Context, node *store.Node, size, mtime 
 		s.repo.UpdateFileAttrs(ctx, node.ID, size, mtime, 0, store.CoverFailed)
 		return
 	}
+	defer rc.Close()
 	coverStatus := store.CoverReady
 	if err := s.writeThumb(node.ID, rc); err != nil {
 		log.Printf("scanner: thumb %s: %v", node.Path, err)
 		coverStatus = store.CoverFailed
 	}
-	rc.Close()
 	if err := s.repo.UpdateFileAttrs(ctx, node.ID, size, mtime, count, coverStatus); err != nil {
 		log.Printf("scanner: update attrs %s: %v", node.Path, err)
 	}
@@ -150,10 +150,12 @@ func (r readerOnly) Read(p []byte) (int, error) { return r.r.Read(p) }
 func (s *Scanner) removeNode(ctx context.Context, n *store.Node) {
 	if n.Type == store.NodeDir {
 		kids, err := s.repo.ListChildren(ctx, n.ID)
-		if err == nil {
-			for _, k := range kids {
-				s.removeNode(ctx, k)
-			}
+		if err != nil {
+			log.Printf("scanner: list children of %d for deletion: %v; skipping subtree removal", n.ID, err)
+			return
+		}
+		for _, k := range kids {
+			s.removeNode(ctx, k)
 		}
 	}
 	os.Remove(s.thumbPath(n.ID))

@@ -82,17 +82,22 @@ func TestScanCreatesComicWithCoverAndPages(t *testing.T) {
 }
 
 func TestScanRemovesDeletedFiles(t *testing.T) {
-	sc, repo, root, _ := newTestScanner(t)
+	sc, repo, root, data := newTestScanner(t)
 	zp := filepath.Join(root, "a.zip")
 	writeZip(t, zp, map[string][]byte{"001.png": pngBytes(t)})
 	sc.Scan(context.Background())
 	if got, _ := repo.ListChildren(context.Background(), 0); len(got) != 1 {
 		t.Fatalf("expected 1 after first scan, got %d", len(got))
 	}
+	kids, _ := repo.ListChildren(context.Background(), 0)
+	comicID := kids[0].ID
 	os.Remove(zp)
 	sc.Scan(context.Background())
 	if got, _ := repo.ListChildren(context.Background(), 0); len(got) != 0 {
 		t.Fatalf("expected 0 after delete, got %d", len(got))
+	}
+	if _, err := os.Stat(filepath.Join(data, "thumbs", strconvFormat(comicID)+".jpg")); !os.IsNotExist(err) {
+		t.Errorf("thumb file should be removed after deletion, stat err = %v", err)
 	}
 }
 
