@@ -1,0 +1,31 @@
+{{define "title"}}{{.Title}} · Tefnut{{end}}
+{{define "content"}}
+<section class="toolbar">
+  <form method="get" action="" class="filters">
+    <input type="hidden" name="parent" value="{{.ParentID}}">
+    <input type="search" name="q" placeholder="按名称搜索" value="{{.Q}}">
+    <select name="tag">
+      <option value="">全部标签</option>
+      {{range .Tags}}<option value="{{.ID}}" {{if eq .ID $.TagID}}selected{{end}}>{{.Name}} ({{.Count}})</option>{{end}}
+    </select>
+    <select name="minRating">
+      {{range .Ratings}}<option value="{{.}}" {{if eq . $.MinRating}}selected{{end}}>{{if eq . 0}}任意评分{{else}}{{.}}★+{{end}}</option>{{end}}
+    </select>
+    <button type="submit">筛选</button>
+  </form>
+</section>
+{{if .Breadcrumb}}<nav class="crumbs">{{range .Breadcrumb}}<a href="/folder/{{.ID}}">{{.Name}}</a> / {{end}}</nav>{{end}}
+<ul class="grid" id="grid">
+  {{range .Items}}
+  <li class="card {{if eq .Type 2}}dir{{end}}">
+    {{if eq .Type 2}}
+      <a href="/folder/{{.ID}}"><div class="cover folder">📁</div><div class="name">{{.Name}}</div></a>
+    {{else}}
+      <a href="/read/{{.ID}}"><img class="cover" loading="lazy" src="/api/comics/{{.ID}}/cover" alt="{{.Name}}"><div class="name">{{.Name}}</div><div class="stars">{{.Rating}}★</div></a>
+    {{end}}
+  </li>
+  {{end}}
+</ul>
+{{if not .Items}}<p class="empty">没有内容</p>{{end}}
+{{end}}
+{{define "scripts"}}{{end}}

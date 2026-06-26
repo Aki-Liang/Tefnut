@@ -1,0 +1,20 @@
+{{define "title"}}{{.Name}} · 阅读{{end}}
+{{define "content"}}
+<div id="reader" data-id="{{.ID}}" data-pages="{{.PageCount}}" data-start="{{.LastPage}}">
+  <div class="reader-stage">
+    <button class="nav prev" id="prev">‹</button>
+    <img id="page" alt="page">
+    <button class="nav next" id="next">›</button>
+  </div>
+  <div class="reader-bar">
+    <span id="counter"></span>
+    <div class="meta">
+      <label>作者 <input id="author" value="{{.Author}}"></label>
+      <label>评分 <select id="rating">{{range .Ratings}}<option value="{{.}}" {{if eq . $.Rating}}selected{{end}}>{{.}}★</option>{{end}}</select></label>
+    </div>
+    <div class="tags" id="tags"></div>
+    <form id="addtag"><input id="newtag" placeholder="添加标签"><button>+</button></form>
+  </div>
+</div>
+{{end}}
+{{define "scripts"}}<script src="/static/js/reader.js"></script>{{end}}

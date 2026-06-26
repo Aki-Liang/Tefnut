@@ -1,0 +1,14 @@
+{{define "layout"}}<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{block "title" .}}Tefnut{{end}}</title>
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<header class="topbar"><a href="/" class="brand">Tefnut</a><a href="/tags" class="navlink">标签管理</a></header>
+<main>{{block "content" .}}{{end}}</main>
+{{block "scripts" .}}{{end}}
+</body>
+</html>{{end}}

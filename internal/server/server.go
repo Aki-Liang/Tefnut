@@ -1,0 +1,51 @@
+package server
+
+import (
+	"net/http"
+
+	"github.com/labstack/echo/v4"
+
+	"Tefnut/internal/server/web"
+	"Tefnut/internal/store"
+)
+
+type Server struct {
+	nodes      *store.NodeRepo
+	tags       *store.TagRepo
+	progress   *store.ProgressRepo
+	dataDir    string
+	thumbWidth int
+}
+
+func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.ProgressRepo, dataDir string, thumbWidth int) *Server {
+	return &Server{nodes: nodes, tags: tags, progress: progress, dataDir: dataDir, thumbWidth: thumbWidth}
+}
+
+// Register wires routes and static assets onto e.
+func (s *Server) Register(e *echo.Echo) {
+	e.GET("/healthz", func(c echo.Context) error { return c.String(200, "ok") })
+	e.StaticFS("/static", web.Static)
+
+	// Rendered pages (implemented in pages.go).
+	e.GET("/", s.pageBrowse)
+	e.GET("/folder/:id", s.pageBrowse)
+	e.GET("/read/:id", s.pageReader)
+	e.GET("/tags", s.pageTags)
+
+	// JSON / binary API.
+	api := e.Group("/api")
+	api.GET("/nodes", s.apiNodes)
+	api.GET("/comics/:id", s.apiComicDetail)
+	api.GET("/comics/:id/cover", s.apiCover)
+	api.GET("/comics/:id/pages/:n", s.apiPage)
+	api.PATCH("/comics/:id", s.apiUpdateMeta)
+	api.POST("/comics/:id/tags", s.apiAddTag)
+	api.DELETE("/comics/:id/tags/:tagId", s.apiRemoveTag)
+	api.PUT("/comics/:id/progress", s.apiSetProgress)
+	api.GET("/tags", s.apiListTags)
+	api.POST("/tags", s.apiCreateTag)
+	api.PATCH("/tags/:id", s.apiRenameTag)
+	api.DELETE("/tags/:id", s.apiDeleteTag)
+
+	_ = http.StatusOK
+}
