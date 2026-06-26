@@ -30,11 +30,11 @@ type Node struct {
 }
 
 type Tag struct {
-	ID   int64
-	Name string
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
 }
 
 type TagCount struct {
 	Tag
-	Count int
+	Count int `json:"count"`
 }

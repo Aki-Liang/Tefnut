@@ -97,4 +97,39 @@ func TestApiCoverPlaceholderRedirect(t *testing.T) {
 	}
 }
 
+func TestApiComicDetailTagsLowercase(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+
+	tags := store.NewTagRepo(db)
+	tg, err := tags.Upsert(context.Background(), "action")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := tags.AddToNode(context.Background(), n.ID, tg.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/comics/"+itoa(n.ID), nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+
+	body := rec.Body.String()
+	if !strings.Contains(body, `"tags":[{"id":`) {
+		t.Fatalf("expected lowercase tags array, got: %s", body)
+	}
+	if !strings.Contains(body, `"name":"action"`) {
+		t.Fatalf("expected tag name 'action', got: %s", body)
+	}
+	if strings.Contains(body, `"ID":`) {
+		t.Fatalf("unexpected uppercase 'ID' key in response: %s", body)
+	}
+	if strings.Contains(body, `"Name":`) {
+		t.Fatalf("unexpected uppercase 'Name' key in response: %s", body)
+	}
+}
+
 func itoa(i int64) string { return strconv.FormatInt(i, 10) }
