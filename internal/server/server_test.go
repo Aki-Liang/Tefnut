@@ -133,3 +133,25 @@ func TestApiComicDetailTagsLowercase(t *testing.T) {
 }
 
 func itoa(i int64) string { return strconv.FormatInt(i, 10) }
+
+func TestPageBrowseRenders(t *testing.T) {
+	_, e, db := newTestServer(t)
+	store.NewNodeRepo(db).Create(context.Background(), &store.Node{Name: "MyDir", Path: "/x", Type: store.NodeDir})
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "MyDir") {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPageReaderRenders(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	req := httptest.NewRequest(http.MethodGet, "/read/"+itoa(n.ID), nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "data-id=\""+itoa(n.ID)+"\"") {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
