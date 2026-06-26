@@ -31,7 +31,10 @@ func (r *TagRepo) Upsert(ctx context.Context, name string) (*Tag, error) {
 	if err != nil {
 		return nil, fmt.Errorf("store: insert tag %q: %w", name, err)
 	}
-	id, _ := res.LastInsertId()
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, fmt.Errorf("store: last insert id for tag %q: %w", name, err)
+	}
 	return &Tag{ID: id, Name: name}, nil
 }
 
@@ -48,7 +51,7 @@ func (r *TagRepo) List(ctx context.Context) ([]*TagCount, error) {
 	for rows.Next() {
 		tc := &TagCount{}
 		if err := rows.Scan(&tc.ID, &tc.Name, &tc.Count); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("store: scan tag row: %w", err)
 		}
 		out = append(out, tc)
 	}
@@ -70,7 +73,7 @@ func (r *TagRepo) Rename(ctx context.Context, id int64, name string) error {
 func (r *TagRepo) Delete(ctx context.Context, id int64) error {
 	tx, err := r.db.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return fmt.Errorf("store: begin tx: %w", err)
 	}
 	defer tx.Rollback()
 	if _, err := tx.ExecContext(ctx, `DELETE FROM node_tags WHERE tag_id = ?`, id); err != nil {
@@ -113,7 +116,7 @@ func (r *TagRepo) ListForNode(ctx context.Context, nodeID int64) ([]*Tag, error)
 	for rows.Next() {
 		t := &Tag{}
 		if err := rows.Scan(&t.ID, &t.Name); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("store: scan tag row: %w", err)
 		}
 		out = append(out, t)
 	}
