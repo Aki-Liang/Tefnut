@@ -39,3 +39,48 @@ document.addEventListener('keydown', (e) => {
 });
 
 if (total > 0) show(cur); else counter.textContent = '无可显示页面';
+
+// --- metadata editing ---
+const authorInput = document.getElementById('author');
+const ratingSel = document.getElementById('rating');
+const tagsBox = document.getElementById('tags');
+
+function patchMeta(payload) {
+  fetch(`/api/comics/${id}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+}
+authorInput.addEventListener('change', () => patchMeta({ author: authorInput.value }));
+ratingSel.addEventListener('change', () => patchMeta({ rating: parseInt(ratingSel.value, 10) }));
+
+function renderTags(tags) {
+  tagsBox.innerHTML = '';
+  (tags || []).forEach(t => {
+    const span = document.createElement('span');
+    span.className = 'tag';
+    span.textContent = t.name + ' ';
+    const x = document.createElement('button');
+    x.textContent = '×';
+    x.onclick = () => fetch(`/api/comics/${id}/tags/${t.id}`, { method: 'DELETE' }).then(loadDetail);
+    span.appendChild(x);
+    tagsBox.appendChild(span);
+  });
+}
+
+function loadDetail() {
+  fetch(`/api/comics/${id}`).then(r => r.json()).then(j => renderTags(j.data.tags));
+}
+
+document.getElementById('addtag').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const input = document.getElementById('newtag');
+  const name = input.value.trim();
+  if (!name) return;
+  fetch(`/api/comics/${id}/tags`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name })
+  }).then(() => { input.value = ''; loadDetail(); });
+});
+
+loadDetail();

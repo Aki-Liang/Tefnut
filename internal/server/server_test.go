@@ -134,6 +134,64 @@ func TestApiComicDetailTagsLowercase(t *testing.T) {
 
 func itoa(i int64) string { return strconv.FormatInt(i, 10) }
 
+func TestApiUpdateMetaRating(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	req := httptest.NewRequest(http.MethodPatch, "/api/comics/"+itoa(n.ID),
+		strings.NewReader(`{"author":"Aki","rating":4}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	got, _ := store.NewNodeRepo(db).Get(context.Background(), n.ID)
+	if got.Author != "Aki" || got.Rating != 4 {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestApiUpdateMetaRejectsBadRating(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	req := httptest.NewRequest(http.MethodPatch, "/api/comics/"+itoa(n.ID),
+		strings.NewReader(`{"rating":9}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestApiAddAndRemoveTag(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	req := httptest.NewRequest(http.MethodPost, "/api/comics/"+itoa(n.ID)+"/tags",
+		strings.NewReader(`{"name":"action"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("add status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	tags, _ := store.NewTagRepo(db).ListForNode(context.Background(), n.ID)
+	if len(tags) != 1 {
+		t.Fatalf("expected 1 tag, got %d", len(tags))
+	}
+	del := httptest.NewRequest(http.MethodDelete,
+		"/api/comics/"+itoa(n.ID)+"/tags/"+itoa(tags[0].ID), nil)
+	drec := httptest.NewRecorder()
+	e.ServeHTTP(drec, del)
+	if drec.Code != 200 {
+		t.Fatalf("del status=%d", drec.Code)
+	}
+	tags, _ = store.NewTagRepo(db).ListForNode(context.Background(), n.ID)
+	if len(tags) != 0 {
+		t.Fatalf("expected 0 tags after remove")
+	}
+}
+
 func TestPageBrowseRenders(t *testing.T) {
 	_, e, db := newTestServer(t)
 	store.NewNodeRepo(db).Create(context.Background(), &store.Node{Name: "MyDir", Path: "/x", Type: store.NodeDir})
