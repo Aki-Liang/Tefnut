@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"context"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -66,9 +67,11 @@ func (s *Server) pageBrowse(c echo.Context) error {
 	ctx := c.Request().Context()
 	parent := int64(0)
 	if c.Param("id") != "" {
-		if id, err := parseID(c, "id"); err == nil {
-			parent = id
+		id, err := parseID(c, "id")
+		if err != nil {
+			return fail(c, http.StatusBadRequest, err)
 		}
+		parent = id
 	}
 	q := c.QueryParam("q")
 	tagID, _ := strconv.ParseInt(c.QueryParam("tag"), 10, 64)
@@ -86,7 +89,10 @@ func (s *Server) pageBrowse(c echo.Context) error {
 	if err != nil {
 		return fail(c, http.StatusInternalServerError, err)
 	}
-	tags, _ := s.tags.List(ctx)
+	tags, err := s.tags.List(ctx)
+	if err != nil {
+		log.Printf("server: list tags for browse: %v", err)
+	}
 
 	data := browseData{
 		Title:      title,
@@ -103,10 +109,12 @@ func (s *Server) pageBrowse(c echo.Context) error {
 }
 
 // breadcrumb walks parent → ancestor chain via s.nodes.Get until id == 0,
-// returning crumbs in root-first order.
+// returning crumbs in root-first order. A hard depth cap of 64 prevents
+// infinite loops on self-parent or cyclic rows.
 func (s *Server) breadcrumb(ctx context.Context, parent int64) []crumb {
 	var crumbs []crumb
-	for id := parent; id != 0; {
+	id := parent
+	for i := 0; id != 0 && i < 64; i++ {
 		n, err := s.nodes.Get(ctx, id)
 		if err != nil {
 			break
