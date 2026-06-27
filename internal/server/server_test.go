@@ -134,6 +134,38 @@ func TestApiComicDetailTagsLowercase(t *testing.T) {
 
 func itoa(i int64) string { return strconv.FormatInt(i, 10) }
 
+func TestApiSetProgress(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	store.NewNodeRepo(db).UpdateFileAttrs(context.Background(), n.ID, 1, 1, 5, store.CoverReady)
+	req := httptest.NewRequest(http.MethodPut, "/api/comics/"+itoa(n.ID)+"/progress",
+		strings.NewReader(`{"page":3}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	got, _ := store.NewProgressRepo(db).Get(context.Background(), n.ID)
+	if got != 3 {
+		t.Fatalf("progress = %d, want 3", got)
+	}
+}
+
+func TestApiSetProgressOutOfRange(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	store.NewNodeRepo(db).UpdateFileAttrs(context.Background(), n.ID, 1, 1, 5, store.CoverReady)
+	req := httptest.NewRequest(http.MethodPut, "/api/comics/"+itoa(n.ID)+"/progress",
+		strings.NewReader(`{"page":99}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
 func TestApiTagCRUD(t *testing.T) {
 	_, e, _ := newTestServer(t)
 	// create
