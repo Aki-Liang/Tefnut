@@ -134,6 +134,34 @@ func TestApiComicDetailTagsLowercase(t *testing.T) {
 
 func itoa(i int64) string { return strconv.FormatInt(i, 10) }
 
+func TestApiTagCRUD(t *testing.T) {
+	_, e, _ := newTestServer(t)
+	// create
+	req := httptest.NewRequest(http.MethodPost, "/api/tags", strings.NewReader(`{"name":"isekai"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("create status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	// list
+	lrec := httptest.NewRecorder()
+	e.ServeHTTP(lrec, httptest.NewRequest(http.MethodGet, "/api/tags", nil))
+	if !strings.Contains(lrec.Body.String(), "isekai") {
+		t.Fatalf("list body=%s", lrec.Body.String())
+	}
+}
+
+func TestPageTagsRenders(t *testing.T) {
+	_, e, db := newTestServer(t)
+	store.NewTagRepo(db).Upsert(context.Background(), "demo")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/tags", nil))
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "demo") {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
 func TestApiUpdateMetaRating(t *testing.T) {
 	s, e, db := newTestServer(t)
 	n := seedComic(t, db, s.dataDir)
