@@ -154,11 +154,33 @@ func TestApiTagCRUD(t *testing.T) {
 
 func TestPageTagsRenders(t *testing.T) {
 	_, e, db := newTestServer(t)
-	store.NewTagRepo(db).Upsert(context.Background(), "demo")
+	if _, err := store.NewTagRepo(db).Upsert(context.Background(), "demo"); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
 	rec := httptest.NewRecorder()
 	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/tags", nil))
 	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "demo") {
 		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestApiRenameTagDuplicate(t *testing.T) {
+	_, e, db := newTestServer(t)
+	tags := store.NewTagRepo(db)
+	a, err := tags.Upsert(context.Background(), "alpha")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tags.Upsert(context.Background(), "beta"); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodPatch, "/api/tags/"+itoa(a.ID),
+		strings.NewReader(`{"name":"beta"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("expected 409 Conflict, got %d body=%s", rec.Code, rec.Body.String())
 	}
 }
 

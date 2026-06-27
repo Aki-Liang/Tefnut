@@ -6,7 +6,10 @@ document.getElementById('newtagform').addEventListener('submit', (e) => {
   fetch('/api/tags', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ name })
-  }).then(() => location.reload());
+  }).then(r => {
+    if (!r.ok) { alert('新建标签失败'); return; }
+    location.reload();
+  }).catch(() => alert('新建标签失败'));
 });
 
 document.getElementById('taglist').addEventListener('click', (e) => {
@@ -18,10 +21,14 @@ document.getElementById('taglist').addEventListener('click', (e) => {
     fetch(`/api/tags/${id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name })
-    }).then(r => { if (!r.ok) alert('重命名失败（可能重名）'); else location.reload(); });
+    }).then(r => { if (!r.ok) alert('重命名失败（可能重名）'); else location.reload(); })
+      .catch(() => alert('重命名失败'));
   }
   if (e.target.classList.contains('del')) {
     if (!confirm('确认删除该标签？')) return;
-    fetch(`/api/tags/${id}`, { method: 'DELETE' }).then(() => location.reload());
+    fetch(`/api/tags/${id}`, { method: 'DELETE' }).then(r => {
+      if (!r.ok) { alert('删除标签失败'); return; }
+      location.reload();
+    }).catch(() => alert('删除标签失败'));
   }
 });
