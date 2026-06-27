@@ -77,6 +77,16 @@ func TestZipOpenEntry(t *testing.T) {
 	}
 }
 
+func TestWithinDir(t *testing.T) {
+	base := "/data/cache/5"
+	if !withinDir(base, base+"/001.jpg") {
+		t.Error("normal entry should be within base")
+	}
+	if withinDir(base, base+"/../../etc/passwd") {
+		t.Error("traversal entry must be rejected")
+	}
+}
+
 func TestFirstImage(t *testing.T) {
 	dir := t.TempDir()
 	zp := makeZip(t, dir, "c.zip", map[string]string{"2.jpg": "two", "1.jpg": "one"})

@@ -58,7 +58,8 @@ func Open(dsn string) (*DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("store: open %s: %w", dsn, err)
 	}
-	if _, err := sqldb.Exec(`PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;`); err != nil {
+	sqldb.SetMaxOpenConns(1)
+	if _, err := sqldb.Exec(`PRAGMA busy_timeout = 5000; PRAGMA foreign_keys = ON; PRAGMA journal_mode = WAL;`); err != nil {
 		sqldb.Close()
 		return nil, fmt.Errorf("store: pragma: %w", err)
 	}

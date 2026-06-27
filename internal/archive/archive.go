@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/mholt/archiver/v4"
 )
@@ -143,6 +144,15 @@ func (d *dirReader) Open(name string) (io.ReadCloser, error) {
 
 func (d *dirReader) Close() error { return nil }
 
+// withinDir reports whether target is contained within base (no path escape).
+func withinDir(base, target string) bool {
+	rel, err := filepath.Rel(base, target)
+	if err != nil {
+		return false
+	}
+	return rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator))
+}
+
 // ensureExtracted extracts archivePath into cacheDir once; if cacheDir
 // already contains files it is treated as already extracted.
 func ensureExtracted(ctx context.Context, archivePath, cacheDir string) error {
@@ -170,6 +180,9 @@ func ensureExtracted(ctx context.Context, archivePath, cacheDir string) error {
 			return nil
 		}
 		dst := filepath.Join(cacheDir, filepath.FromSlash(f.NameInArchive))
+		if !withinDir(cacheDir, dst) {
+			return fmt.Errorf("archive: unsafe entry path %q in %s", f.NameInArchive, archivePath)
+		}
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return err
 		}
