@@ -19,7 +19,7 @@
   {{range .Items}}
   <li class="card {{if eq .Type 2}}dir{{end}}">
     {{if eq .Type 2}}
-      <a href="/folder/{{.ID}}"><div class="cover folder">📁</div><div class="name">{{.Name}}</div></a>
+      <a href="/folder/{{.ID}}"><div class="cover folder">册</div><div class="name">{{.Name}}</div></a>
     {{else}}
       <a href="/read/{{.ID}}"><img class="cover" loading="lazy" src="/api/comics/{{.ID}}/cover" alt="{{.Name}}"><div class="name">{{.Name}}</div><div class="stars">{{.Rating}}★</div></a>
     {{end}}
