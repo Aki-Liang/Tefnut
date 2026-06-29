@@ -61,13 +61,14 @@ func (s *Server) apiNodes(c echo.Context) error {
 }
 
 type comicDetailDTO struct {
-	ID        int64        `json:"id"`
-	Name      string       `json:"name"`
-	Author    string       `json:"author"`
-	Rating    int          `json:"rating"`
-	PageCount int          `json:"pageCount"`
-	LastPage  int          `json:"lastPage"`
-	Tags      []*store.Tag `json:"tags"`
+	ID               int64        `json:"id"`
+	Name             string       `json:"name"`
+	Author           string       `json:"author"`
+	Rating           int          `json:"rating"`
+	PageCount        int          `json:"pageCount"`
+	LastPage         int          `json:"lastPage"`
+	Tags             []*store.Tag `json:"tags"`
+	ReadingDirection string       `json:"readingDirection"`
 }
 
 func (s *Server) apiComicDetail(c echo.Context) error {
@@ -88,6 +89,7 @@ func (s *Server) apiComicDetail(c echo.Context) error {
 	return ok(c, comicDetailDTO{
 		ID: n.ID, Name: n.Name, Author: n.Author, Rating: n.Rating,
 		PageCount: n.PageCount, LastPage: last, Tags: tags,
+		ReadingDirection: n.ReadingDirection,
 	})
 }
 

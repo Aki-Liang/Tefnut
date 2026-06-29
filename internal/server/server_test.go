@@ -419,6 +419,46 @@ func TestPageSettingsRenders(t *testing.T) {
 	}
 }
 
+func TestApiComicDetailHasDirection(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/comics/"+itoa(n.ID), nil))
+	if !strings.Contains(rec.Body.String(), `"readingDirection":"ltr"`) {
+		t.Fatalf("body=%s", rec.Body.String())
+	}
+}
+
+func TestApiUpdateMetaSetsDirection(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	req := httptest.NewRequest(http.MethodPatch, "/api/comics/"+itoa(n.ID),
+		strings.NewReader(`{"readingDirection":"rtl"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	got, _ := store.NewNodeRepo(db).Get(context.Background(), n.ID)
+	if got.ReadingDirection != "rtl" {
+		t.Fatalf("direction=%q", got.ReadingDirection)
+	}
+}
+
+func TestApiUpdateMetaRejectsBadDirection(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	req := httptest.NewRequest(http.MethodPatch, "/api/comics/"+itoa(n.ID),
+		strings.NewReader(`{"readingDirection":"sideways"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
 func TestSidebarOnBrowseNotReader(t *testing.T) {
 	s, e, db := newTestServer(t)
 	n := seedComic(t, db, s.dataDir)

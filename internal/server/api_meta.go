@@ -13,8 +13,9 @@ import (
 )
 
 type metaReq struct {
-	Author *string `json:"author"`
-	Rating *int    `json:"rating"`
+	Author           *string `json:"author"`
+	Rating           *int    `json:"rating"`
+	ReadingDirection *string `json:"readingDirection"`
 }
 
 func (s *Server) apiUpdateMeta(c echo.Context) error {
@@ -29,6 +30,12 @@ func (s *Server) apiUpdateMeta(c echo.Context) error {
 	}
 	if body.Rating != nil && (*body.Rating < 0 || *body.Rating > 5) {
 		return fail(c, http.StatusBadRequest, errors.New("rating must be 0..5"))
+	}
+	if body.ReadingDirection != nil {
+		dir := *body.ReadingDirection
+		if dir != "ltr" && dir != "rtl" {
+			return fail(c, http.StatusBadRequest, errors.New("readingDirection must be ltr or rtl"))
+		}
 	}
 	n, err := s.nodes.Get(ctx, id)
 	if errors.Is(err, store.ErrNotFound) {
@@ -47,6 +54,11 @@ func (s *Server) apiUpdateMeta(c echo.Context) error {
 	}
 	if err := s.nodes.UpdateMeta(ctx, id, author, rating); err != nil {
 		return fail(c, http.StatusInternalServerError, err)
+	}
+	if body.ReadingDirection != nil {
+		if err := s.nodes.UpdateReadingDirection(ctx, id, *body.ReadingDirection); err != nil {
+			return fail(c, http.StatusInternalServerError, err)
+		}
 	}
 	return ok(c, map[string]any{"author": author, "rating": rating})
 }
