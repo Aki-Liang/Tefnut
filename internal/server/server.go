@@ -5,9 +5,12 @@ import (
 
 	"github.com/labstack/echo/v4"
 
+	"Tefnut/internal/archive"
 	"Tefnut/internal/server/web"
 	"Tefnut/internal/store"
 )
+
+const archiveCacheSize = 8
 
 // Reconfigurer is satisfied by *scan.Manager via its Reconfigure method.
 type Reconfigurer interface {
@@ -24,6 +27,7 @@ type Server struct {
 	dataDir    string
 	thumbWidth int
 	thumbs     *thumbCache
+	readers    *archive.ReaderCache
 }
 
 func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.ProgressRepo,
@@ -31,7 +35,7 @@ func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.Progr
 	dataDir string, thumbWidth int) *Server {
 	return &Server{nodes: nodes, tags: tags, progress: progress, settings: settings,
 		paths: paths, reconf: reconf, dataDir: dataDir, thumbWidth: thumbWidth,
-		thumbs: newThumbCache(256)}
+		thumbs: newThumbCache(256), readers: archive.NewReaderCache(archiveCacheSize)}
 }
 
 // Register wires routes and static assets onto e.

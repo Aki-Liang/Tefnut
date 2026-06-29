@@ -1,18 +1,21 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"path/filepath"
 	"strconv"
 
 	"github.com/labstack/echo/v4"
 
-	"Tefnut/internal/archive"
 	"Tefnut/internal/store"
 	"Tefnut/internal/thumb"
 )
+
+var errPageRange = errors.New("page out of range")
 
 type nodeDTO struct {
 	ID          int64  `json:"id"`
@@ -112,6 +115,29 @@ func (s *Server) apiCover(c echo.Context) error {
 	return c.File(p)
 }
 
+// openPage acquires a (cached) archive reader for node n, returns the entry
+// reader for pageNum, its name, and a release func that frees the archive
+// reader. Callers MUST defer release() AND close the returned entry reader.
+func (s *Server) openPage(ctx context.Context, n *store.Node, pageNum int) (io.ReadCloser, string, func(), error) {
+	cacheDir := filepath.Join(s.dataDir, "cache", strconv.FormatInt(n.ID, 10))
+	key := strconv.FormatInt(n.ID, 10)
+	r, release, err := s.readers.Acquire(ctx, key, n.Path, n.MTime, cacheDir)
+	if err != nil {
+		return nil, "", nil, err
+	}
+	names := r.List()
+	if pageNum < 0 || pageNum >= len(names) {
+		release()
+		return nil, "", nil, errPageRange
+	}
+	rc, err := r.Open(names[pageNum])
+	if err != nil {
+		release()
+		return nil, "", nil, err
+	}
+	return rc, names[pageNum], release, nil
+}
+
 func (s *Server) apiPage(c echo.Context) error {
 	ctx := c.Request().Context()
 	id, err := parseID(c, "id")
@@ -129,22 +155,16 @@ func (s *Server) apiPage(c echo.Context) error {
 	if err != nil || pageNum < 0 {
 		return fail(c, http.StatusBadRequest, fmt.Errorf("invalid page"))
 	}
-	cacheDir := filepath.Join(s.dataDir, "cache", strconv.FormatInt(id, 10))
-	r, err := archive.Open(ctx, n.Path, cacheDir)
+	rc, name, release, err := s.openPage(ctx, n, pageNum)
 	if err != nil {
+		if errors.Is(err, errPageRange) {
+			return fail(c, http.StatusNotFound, err)
+		}
 		return fail(c, http.StatusInternalServerError, err)
 	}
-	defer r.Close()
-	names := r.List()
-	if pageNum >= len(names) {
-		return fail(c, http.StatusNotFound, fmt.Errorf("page out of range"))
-	}
-	rc, err := r.Open(names[pageNum])
-	if err != nil {
-		return fail(c, http.StatusInternalServerError, err)
-	}
+	defer release()
 	defer rc.Close()
-	return c.Stream(http.StatusOK, contentType(names[pageNum]), rc)
+	return c.Stream(http.StatusOK, contentType(name), rc)
 }
 
 func (s *Server) apiPageThumb(c echo.Context) error {
@@ -169,25 +189,14 @@ func (s *Server) apiPageThumb(c echo.Context) error {
 	if err != nil {
 		return fail(c, http.StatusInternalServerError, err)
 	}
-	cacheDir := filepath.Join(s.dataDir, "cache", strconv.FormatInt(id, 10))
-	// Each thumbnail request opens the archive fresh. For zip/cbz this only
-	// reads the (small) central directory, the decode/resize dominates and is
-	// inherent, the frontend lazy-loads only visible thumbs (IntersectionObserver),
-	// and generated thumbs are served from the in-memory cache + browser cache
-	// (Cache-Control). Acceptable for a single-user home library.
-	r, err := archive.Open(ctx, n.Path, cacheDir)
+	rc, _, release, err := s.openPage(ctx, n, pageNum)
 	if err != nil {
+		if errors.Is(err, errPageRange) {
+			return fail(c, http.StatusNotFound, err)
+		}
 		return fail(c, http.StatusInternalServerError, err)
 	}
-	defer r.Close()
-	names := r.List()
-	if pageNum >= len(names) {
-		return fail(c, http.StatusNotFound, fmt.Errorf("page out of range"))
-	}
-	rc, err := r.Open(names[pageNum])
-	if err != nil {
-		return fail(c, http.StatusInternalServerError, err)
-	}
+	defer release()
 	defer rc.Close()
 	data, err := thumb.Generate(rc, 120)
 	if err != nil {
