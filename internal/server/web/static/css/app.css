@@ -43,6 +43,7 @@ body {
   background-size: 11px 11px;
   background-attachment: fixed;
   line-height: 1.45;
+  accent-color: var(--seal);
 }
 
 ::selection { background: var(--seal); color: #fff; }
