@@ -11,15 +11,16 @@ import (
 var ErrDuplicate = errors.New("store: duplicate")
 
 type TagRepo struct {
-	db *sql.DB
+	rdb *sql.DB
+	wdb *sql.DB
 }
 
-func NewTagRepo(db *DB) *TagRepo { return &TagRepo{db: db.SQL()} }
+func NewTagRepo(db *DB) *TagRepo { return &TagRepo{rdb: db.Read(), wdb: db.Write()} }
 
 func (r *TagRepo) Upsert(ctx context.Context, name string) (*Tag, error) {
 	name = strings.TrimSpace(name)
 	var t Tag
-	err := r.db.QueryRowContext(ctx, `SELECT id, name FROM tags WHERE name = ?`, name).
+	err := r.wdb.QueryRowContext(ctx, `SELECT id, name FROM tags WHERE name = ?`, name).
 		Scan(&t.ID, &t.Name)
 	if err == nil {
 		return &t, nil
@@ -27,7 +28,7 @@ func (r *TagRepo) Upsert(ctx context.Context, name string) (*Tag, error) {
 	if !errors.Is(err, sql.ErrNoRows) {
 		return nil, fmt.Errorf("store: upsert tag lookup: %w", err)
 	}
-	res, err := r.db.ExecContext(ctx, `INSERT INTO tags (name) VALUES (?)`, name)
+	res, err := r.wdb.ExecContext(ctx, `INSERT INTO tags (name) VALUES (?)`, name)
 	if err != nil {
 		return nil, fmt.Errorf("store: insert tag %q: %w", name, err)
 	}
@@ -39,7 +40,7 @@ func (r *TagRepo) Upsert(ctx context.Context, name string) (*Tag, error) {
 }
 
 func (r *TagRepo) List(ctx context.Context) ([]*TagCount, error) {
-	rows, err := r.db.QueryContext(ctx,
+	rows, err := r.rdb.QueryContext(ctx,
 		`SELECT t.id, t.name, COUNT(nt.node_id)
 		 FROM tags t LEFT JOIN node_tags nt ON nt.tag_id = t.id
 		 GROUP BY t.id, t.name ORDER BY t.name ASC`)
@@ -60,7 +61,7 @@ func (r *TagRepo) List(ctx context.Context) ([]*TagCount, error) {
 
 func (r *TagRepo) Rename(ctx context.Context, id int64, name string) error {
 	name = strings.TrimSpace(name)
-	_, err := r.db.ExecContext(ctx, `UPDATE tags SET name = ? WHERE id = ?`, name, id)
+	_, err := r.wdb.ExecContext(ctx, `UPDATE tags SET name = ? WHERE id = ?`, name, id)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") {
 			return ErrDuplicate
@@ -71,7 +72,7 @@ func (r *TagRepo) Rename(ctx context.Context, id int64, name string) error {
 }
 
 func (r *TagRepo) Delete(ctx context.Context, id int64) error {
-	tx, err := r.db.BeginTx(ctx, nil)
+	tx, err := r.wdb.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("store: begin tx: %w", err)
 	}
@@ -86,7 +87,7 @@ func (r *TagRepo) Delete(ctx context.Context, id int64) error {
 }
 
 func (r *TagRepo) AddToNode(ctx context.Context, nodeID, tagID int64) error {
-	_, err := r.db.ExecContext(ctx,
+	_, err := r.wdb.ExecContext(ctx,
 		`INSERT OR IGNORE INTO node_tags (node_id, tag_id) VALUES (?, ?)`, nodeID, tagID)
 	if err != nil {
 		return fmt.Errorf("store: add tag %d to node %d: %w", tagID, nodeID, err)
@@ -95,7 +96,7 @@ func (r *TagRepo) AddToNode(ctx context.Context, nodeID, tagID int64) error {
 }
 
 func (r *TagRepo) RemoveFromNode(ctx context.Context, nodeID, tagID int64) error {
-	_, err := r.db.ExecContext(ctx,
+	_, err := r.wdb.ExecContext(ctx,
 		`DELETE FROM node_tags WHERE node_id = ? AND tag_id = ?`, nodeID, tagID)
 	if err != nil {
 		return fmt.Errorf("store: remove tag %d from node %d: %w", tagID, nodeID, err)
@@ -104,7 +105,7 @@ func (r *TagRepo) RemoveFromNode(ctx context.Context, nodeID, tagID int64) error
 }
 
 func (r *TagRepo) ListForNode(ctx context.Context, nodeID int64) ([]*Tag, error) {
-	rows, err := r.db.QueryContext(ctx,
+	rows, err := r.rdb.QueryContext(ctx,
 		`SELECT t.id, t.name FROM tags t
 		 JOIN node_tags nt ON nt.tag_id = t.id
 		 WHERE nt.node_id = ? ORDER BY t.name ASC`, nodeID)

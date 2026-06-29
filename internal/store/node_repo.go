@@ -27,10 +27,11 @@ func appendLimit(sb *strings.Builder, args *[]any, limit, offset int) {
 }
 
 type NodeRepo struct {
-	db *sql.DB
+	rdb *sql.DB
+	wdb *sql.DB
 }
 
-func NewNodeRepo(db *DB) *NodeRepo { return &NodeRepo{db: db.SQL()} }
+func NewNodeRepo(db *DB) *NodeRepo { return &NodeRepo{rdb: db.Read(), wdb: db.Write()} }
 
 func scanNode(s interface{ Scan(...any) error }) (*Node, error) {
 	n := &Node{}
@@ -42,7 +43,7 @@ func scanNode(s interface{ Scan(...any) error }) (*Node, error) {
 
 func (r *NodeRepo) Create(ctx context.Context, n *Node) (*Node, error) {
 	now := time.Now().Unix()
-	res, err := r.db.ExecContext(ctx,
+	res, err := r.wdb.ExecContext(ctx,
 		`INSERT INTO nodes (parent_id, name, path, type, page_count, cover_status,
 			author, rating, size, mtime, created_at, updated_at)
 		 VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
@@ -62,7 +63,7 @@ func (r *NodeRepo) Create(ctx context.Context, n *Node) (*Node, error) {
 }
 
 func (r *NodeRepo) Get(ctx context.Context, id int64) (*Node, error) {
-	row := r.db.QueryRowContext(ctx, `SELECT `+nodeCols+` FROM nodes WHERE id = ?`, id)
+	row := r.rdb.QueryRowContext(ctx, `SELECT `+nodeCols+` FROM nodes WHERE id = ?`, id)
 	n, err := scanNode(row)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -78,7 +79,7 @@ func (r *NodeRepo) ListChildren(ctx context.Context, parentID int64, limit, offs
 	args := []any{parentID}
 	sb.WriteString(`SELECT ` + nodeCols + ` FROM nodes WHERE parent_id = ? ORDER BY type DESC, name ASC`)
 	appendLimit(&sb, &args, limit, offset)
-	rows, err := r.db.QueryContext(ctx, sb.String(), args...)
+	rows, err := r.rdb.QueryContext(ctx, sb.String(), args...)
 	if err != nil {
 		return nil, fmt.Errorf("store: list children %d: %w", parentID, err)
 	}
@@ -107,7 +108,7 @@ func (r *NodeRepo) Search(ctx context.Context, q string, tagID int64, minRating,
 	}
 	sb.WriteString(` ORDER BY n.name ASC`)
 	appendLimit(&sb, &args, limit, offset)
-	rows, err := r.db.QueryContext(ctx, sb.String(), args...)
+	rows, err := r.rdb.QueryContext(ctx, sb.String(), args...)
 	if err != nil {
 		return nil, fmt.Errorf("store: search: %w", err)
 	}
@@ -115,7 +116,7 @@ func (r *NodeRepo) Search(ctx context.Context, q string, tagID int64, minRating,
 }
 
 func (r *NodeRepo) UpdateFileAttrs(ctx context.Context, id, size, mtime int64, pageCount, coverStatus int) error {
-	_, err := r.db.ExecContext(ctx,
+	_, err := r.wdb.ExecContext(ctx,
 		`UPDATE nodes SET size=?, mtime=?, page_count=?, cover_status=?, updated_at=? WHERE id=?`,
 		size, mtime, pageCount, coverStatus, time.Now().Unix(), id)
 	if err != nil {
@@ -125,7 +126,7 @@ func (r *NodeRepo) UpdateFileAttrs(ctx context.Context, id, size, mtime int64, p
 }
 
 func (r *NodeRepo) UpdateName(ctx context.Context, id int64, name string) error {
-	_, err := r.db.ExecContext(ctx,
+	_, err := r.wdb.ExecContext(ctx,
 		`UPDATE nodes SET name=?, updated_at=? WHERE id=?`, name, time.Now().Unix(), id)
 	if err != nil {
 		return fmt.Errorf("store: update name %d: %w", id, err)
@@ -167,14 +168,14 @@ func (r *NodeRepo) UpdateFields(ctx context.Context, id int64, p NodePatch) erro
 	sets = append(sets, "updated_at=?")
 	args = append(args, time.Now().Unix(), id)
 	q := `UPDATE nodes SET ` + strings.Join(sets, ", ") + ` WHERE id=?`
-	if _, err := r.db.ExecContext(ctx, q, args...); err != nil {
+	if _, err := r.wdb.ExecContext(ctx, q, args...); err != nil {
 		return fmt.Errorf("store: update fields %d: %w", id, err)
 	}
 	return nil
 }
 
 func (r *NodeRepo) Delete(ctx context.Context, id int64) error {
-	tx, err := r.db.BeginTx(ctx, nil)
+	tx, err := r.wdb.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}

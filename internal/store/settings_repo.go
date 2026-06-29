@@ -24,14 +24,15 @@ const (
 )
 
 type SettingsRepo struct {
-	db *sql.DB
+	rdb *sql.DB
+	wdb *sql.DB
 }
 
-func NewSettingsRepo(db *DB) *SettingsRepo { return &SettingsRepo{db: db.SQL()} }
+func NewSettingsRepo(db *DB) *SettingsRepo { return &SettingsRepo{rdb: db.Read(), wdb: db.Write()} }
 
 func (r *SettingsRepo) get(ctx context.Context, key, def string) (string, error) {
 	var v string
-	err := r.db.QueryRowContext(ctx, `SELECT value FROM settings WHERE key = ?`, key).Scan(&v)
+	err := r.rdb.QueryRowContext(ctx, `SELECT value FROM settings WHERE key = ?`, key).Scan(&v)
 	if errors.Is(err, sql.ErrNoRows) {
 		return def, nil
 	}
@@ -58,7 +59,7 @@ func (r *SettingsRepo) GetScan(ctx context.Context) (ScanSettings, error) {
 }
 
 func (r *SettingsRepo) SetScan(ctx context.Context, s ScanSettings) error {
-	tx, err := r.db.BeginTx(ctx, nil)
+	tx, err := r.wdb.BeginTx(ctx, nil)
 	if err != nil {
 		return fmt.Errorf("store: begin tx: %w", err)
 	}

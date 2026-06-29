@@ -16,13 +16,16 @@ type LibraryPath struct {
 }
 
 type LibraryPathRepo struct {
-	db *sql.DB
+	rdb *sql.DB
+	wdb *sql.DB
 }
 
-func NewLibraryPathRepo(db *DB) *LibraryPathRepo { return &LibraryPathRepo{db: db.SQL()} }
+func NewLibraryPathRepo(db *DB) *LibraryPathRepo {
+	return &LibraryPathRepo{rdb: db.Read(), wdb: db.Write()}
+}
 
 func (r *LibraryPathRepo) List(ctx context.Context) ([]*LibraryPath, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT id, name, path FROM library_paths ORDER BY id`)
+	rows, err := r.rdb.QueryContext(ctx, `SELECT id, name, path FROM library_paths ORDER BY id`)
 	if err != nil {
 		return nil, fmt.Errorf("store: list library paths: %w", err)
 	}
@@ -40,7 +43,7 @@ func (r *LibraryPathRepo) List(ctx context.Context) ([]*LibraryPath, error) {
 
 func (r *LibraryPathRepo) Get(ctx context.Context, id int64) (*LibraryPath, error) {
 	lp := &LibraryPath{}
-	err := r.db.QueryRowContext(ctx, `SELECT id, name, path FROM library_paths WHERE id = ?`, id).
+	err := r.rdb.QueryRowContext(ctx, `SELECT id, name, path FROM library_paths WHERE id = ?`, id).
 		Scan(&lp.ID, &lp.Name, &lp.Path)
 	if errors.Is(err, sql.ErrNoRows) {
 		return nil, ErrNotFound
@@ -52,7 +55,7 @@ func (r *LibraryPathRepo) Get(ctx context.Context, id int64) (*LibraryPath, erro
 }
 
 func (r *LibraryPathRepo) Add(ctx context.Context, name, path string) (*LibraryPath, error) {
-	res, err := r.db.ExecContext(ctx,
+	res, err := r.wdb.ExecContext(ctx,
 		`INSERT INTO library_paths (name, path, created_at) VALUES (?, ?, ?)`,
 		name, path, time.Now().Unix())
 	if err != nil {
@@ -69,7 +72,7 @@ func (r *LibraryPathRepo) Add(ctx context.Context, name, path string) (*LibraryP
 }
 
 func (r *LibraryPathRepo) Rename(ctx context.Context, id int64, name string) error {
-	_, err := r.db.ExecContext(ctx, `UPDATE library_paths SET name = ? WHERE id = ?`, name, id)
+	_, err := r.wdb.ExecContext(ctx, `UPDATE library_paths SET name = ? WHERE id = ?`, name, id)
 	if err != nil {
 		return fmt.Errorf("store: rename library path %d: %w", id, err)
 	}
@@ -77,7 +80,7 @@ func (r *LibraryPathRepo) Rename(ctx context.Context, id int64, name string) err
 }
 
 func (r *LibraryPathRepo) Delete(ctx context.Context, id int64) error {
-	res, err := r.db.ExecContext(ctx, `DELETE FROM library_paths WHERE id = ?`, id)
+	res, err := r.wdb.ExecContext(ctx, `DELETE FROM library_paths WHERE id = ?`, id)
 	if err != nil {
 		return fmt.Errorf("store: delete library path %d: %w", id, err)
 	}

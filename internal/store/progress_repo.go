@@ -9,14 +9,15 @@ import (
 )
 
 type ProgressRepo struct {
-	db *sql.DB
+	rdb *sql.DB
+	wdb *sql.DB
 }
 
-func NewProgressRepo(db *DB) *ProgressRepo { return &ProgressRepo{db: db.SQL()} }
+func NewProgressRepo(db *DB) *ProgressRepo { return &ProgressRepo{rdb: db.Read(), wdb: db.Write()} }
 
 func (r *ProgressRepo) Get(ctx context.Context, nodeID int64) (int, error) {
 	var page int
-	err := r.db.QueryRowContext(ctx,
+	err := r.rdb.QueryRowContext(ctx,
 		`SELECT last_page FROM progress WHERE node_id = ?`, nodeID).Scan(&page)
 	if errors.Is(err, sql.ErrNoRows) {
 		return 0, nil
@@ -28,7 +29,7 @@ func (r *ProgressRepo) Get(ctx context.Context, nodeID int64) (int, error) {
 }
 
 func (r *ProgressRepo) Set(ctx context.Context, nodeID int64, page int) error {
-	_, err := r.db.ExecContext(ctx,
+	_, err := r.wdb.ExecContext(ctx,
 		`INSERT INTO progress (node_id, last_page, updated_at) VALUES (?,?,?)
 		 ON CONFLICT(node_id) DO UPDATE SET last_page=excluded.last_page, updated_at=excluded.updated_at`,
 		nodeID, page, time.Now().Unix())

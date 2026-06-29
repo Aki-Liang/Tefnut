@@ -14,21 +14,21 @@ const (
 )
 
 type Node struct {
-	ID          int64
-	ParentID    int64
-	Name        string
-	Path        string
-	Type        NodeType
-	PageCount   int
-	CoverStatus int
-	Author      string
+	ID               int64
+	ParentID         int64
+	Name             string
+	Path             string
+	Type             NodeType
+	PageCount        int
+	CoverStatus      int
+	Author           string
 	Rating           int
 	ReadingDirection string
 	DisplayMode      string
 	Size             int64
-	MTime       int64
-	CreatedAt   int64
-	UpdatedAt   int64
+	MTime            int64
+	CreatedAt        int64
+	UpdatedAt        int64
 }
 
 type Tag struct {
