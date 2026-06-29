@@ -11,6 +11,21 @@ import (
 
 var ErrNotFound = errors.New("store: not found")
 
+const defaultPageLimit = 500
+
+// appendLimit appends a LIMIT/OFFSET clause to sb and args. limit<0 means no
+// limit; limit==0 means the default cap (defaultPageLimit).
+func appendLimit(sb *strings.Builder, args *[]any, limit, offset int) {
+	if limit < 0 {
+		return
+	}
+	if limit == 0 {
+		limit = defaultPageLimit
+	}
+	sb.WriteString(` LIMIT ? OFFSET ?`)
+	*args = append(*args, limit, offset)
+}
+
 type NodeRepo struct {
 	db *sql.DB
 }
@@ -58,16 +73,19 @@ func (r *NodeRepo) Get(ctx context.Context, id int64) (*Node, error) {
 	return n, nil
 }
 
-func (r *NodeRepo) ListChildren(ctx context.Context, parentID int64) ([]*Node, error) {
-	rows, err := r.db.QueryContext(ctx,
-		`SELECT `+nodeCols+` FROM nodes WHERE parent_id = ? ORDER BY type DESC, name ASC`, parentID)
+func (r *NodeRepo) ListChildren(ctx context.Context, parentID int64, limit, offset int) ([]*Node, error) {
+	var sb strings.Builder
+	args := []any{parentID}
+	sb.WriteString(`SELECT ` + nodeCols + ` FROM nodes WHERE parent_id = ? ORDER BY type DESC, name ASC`)
+	appendLimit(&sb, &args, limit, offset)
+	rows, err := r.db.QueryContext(ctx, sb.String(), args...)
 	if err != nil {
 		return nil, fmt.Errorf("store: list children %d: %w", parentID, err)
 	}
 	return collectNodes(rows)
 }
 
-func (r *NodeRepo) Search(ctx context.Context, q string, tagID int64, minRating int) ([]*Node, error) {
+func (r *NodeRepo) Search(ctx context.Context, q string, tagID int64, minRating, limit, offset int) ([]*Node, error) {
 	var sb strings.Builder
 	args := []any{}
 	sb.WriteString(`SELECT `)
@@ -88,6 +106,7 @@ func (r *NodeRepo) Search(ctx context.Context, q string, tagID int64, minRating 
 		args = append(args, minRating)
 	}
 	sb.WriteString(` ORDER BY n.name ASC`)
+	appendLimit(&sb, &args, limit, offset)
 	rows, err := r.db.QueryContext(ctx, sb.String(), args...)
 	if err != nil {
 		return nil, fmt.Errorf("store: search: %w", err)

@@ -41,14 +41,19 @@ func (s *Server) apiNodes(c echo.Context) error {
 	q := c.QueryParam("q")
 	tagID, _ := strconv.ParseInt(c.QueryParam("tag"), 10, 64)
 	minRating, _ := strconv.Atoi(c.QueryParam("minRating"))
+	limit, _ := strconv.Atoi(c.QueryParam("limit")) // 0 => default cap
+	offset, _ := strconv.Atoi(c.QueryParam("offset"))
+	if offset < 0 {
+		offset = 0
+	}
 
 	var nodes []*store.Node
 	var err error
 	if q != "" || tagID > 0 || minRating > 0 {
-		nodes, err = s.nodes.Search(ctx, q, tagID, minRating)
+		nodes, err = s.nodes.Search(ctx, q, tagID, minRating, limit, offset)
 	} else {
 		parent, _ := strconv.ParseInt(c.QueryParam("parent"), 10, 64)
-		nodes, err = s.nodes.ListChildren(ctx, parent)
+		nodes, err = s.nodes.ListChildren(ctx, parent, limit, offset)
 	}
 	if err != nil {
 		return fail(c, http.StatusInternalServerError, err)

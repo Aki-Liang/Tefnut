@@ -44,7 +44,7 @@ func TestListChildrenDirsFirst(t *testing.T) {
 	r := NewNodeRepo(openTemp(t))
 	mkNode(t, r, 0, "b-comic", "/lib/b.zip", NodeComic)
 	mkNode(t, r, 0, "a-dir", "/lib/a", NodeDir)
-	kids, err := r.ListChildren(context.Background(), 0)
+	kids, err := r.ListChildren(context.Background(), 0, -1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -63,11 +63,11 @@ func TestSearchByNameAndRating(t *testing.T) {
 	if err := r.UpdateFields(ctx, a.ID, NodePatch{Author: &kishimoto, Rating: &five}); err != nil {
 		t.Fatal(err)
 	}
-	res, err := r.Search(ctx, "naruto", 0, 0)
+	res, err := r.Search(ctx, "naruto", 0, 0, -1, 0)
 	if err != nil || len(res) != 1 || res[0].ID != a.ID {
 		t.Fatalf("name search: %v / %+v", err, res)
 	}
-	res, err = r.Search(ctx, "", 0, 3)
+	res, err = r.Search(ctx, "", 0, 3, -1, 0)
 	if err != nil || len(res) != 1 || res[0].ID != a.ID {
 		t.Fatalf("rating search: %v / %+v", err, res)
 	}
@@ -177,7 +177,7 @@ func TestSearchAndGetReturnSameFields(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	results, err := repo.Search(ctx, "Alpha", 0, 0)
+	results, err := repo.Search(ctx, "Alpha", 0, 0, -1, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -188,5 +188,29 @@ func TestSearchAndGetReturnSameFields(t *testing.T) {
 	// Every field that crosses the column boundary must match between paths.
 	if *viaGet != *viaSearch {
 		t.Fatalf("Get vs Search node mismatch:\n get=%+v\n srch=%+v", viaGet, viaSearch)
+	}
+}
+
+func TestListChildrenPagination(t *testing.T) {
+	repo := NewNodeRepo(openTemp(t))
+	ctx := context.Background()
+	for i := 0; i < 5; i++ {
+		if _, err := repo.Create(ctx, &Node{ParentID: 1, Name: "n" + itoa(i), Path: "/p" + itoa(i), Type: NodeComic}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	page, err := repo.ListChildren(ctx, 1, 2, 1) // limit 2, offset 1
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(page) != 2 {
+		t.Fatalf("page len = %d, want 2", len(page))
+	}
+	all, err := repo.ListChildren(ctx, 1, -1, 0) // no limit
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 5 {
+		t.Fatalf("all len = %d, want 5", len(all))
 	}
 }

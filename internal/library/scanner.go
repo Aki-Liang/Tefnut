@@ -43,7 +43,7 @@ func (s *Scanner) Scan(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("scanner: list library paths: %w", err)
 	}
-	roots, err := s.repo.ListChildren(ctx, 0)
+	roots, err := s.repo.ListChildren(ctx, 0, -1, 0)
 	if err != nil {
 		return err
 	}
@@ -96,7 +96,7 @@ func (s *Scanner) scanDir(ctx context.Context, dir string, parentID int64) error
 		return fmt.Errorf("scanner: read dir %s: %w", dir, err)
 	}
 
-	existing, err := s.repo.ListChildren(ctx, parentID)
+	existing, err := s.repo.ListChildren(ctx, parentID, -1, 0)
 	if err != nil {
 		return err
 	}
@@ -198,7 +198,7 @@ func (r readerOnly) Read(p []byte) (int, error) { return r.r.Read(p) }
 
 func (s *Scanner) removeNode(ctx context.Context, n *store.Node) {
 	if n.Type == store.NodeDir {
-		kids, err := s.repo.ListChildren(ctx, n.ID)
+		kids, err := s.repo.ListChildren(ctx, n.ID, -1, 0)
 		if err != nil {
 			log.Printf("scanner: list children of %d for deletion: %v; skipping subtree removal", n.ID, err)
 			return

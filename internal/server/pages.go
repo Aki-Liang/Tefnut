@@ -83,10 +83,10 @@ func (s *Server) pageBrowse(c echo.Context) error {
 	var err error
 	title := "漫画库"
 	if q != "" || tagID > 0 || minRating > 0 {
-		items, err = s.nodes.Search(ctx, q, tagID, minRating)
+		items, err = s.nodes.Search(ctx, q, tagID, minRating, 0, 0)
 		title = "搜索结果"
 	} else {
-		items, err = s.nodes.ListChildren(ctx, parent)
+		items, err = s.nodes.ListChildren(ctx, parent, 0, 0)
 	}
 	if err != nil {
 		return fail(c, http.StatusInternalServerError, err)

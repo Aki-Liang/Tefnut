@@ -64,17 +64,17 @@ func TestScanCreatesComicWithCoverAndPages(t *testing.T) {
 		t.Fatalf("Scan: %v", err)
 	}
 	// top-level: library node
-	libs, _ := nodes.ListChildren(ctx, 0)
+	libs, _ := nodes.ListChildren(ctx, 0, -1, 0)
 	if len(libs) != 1 || libs[0].Type != store.NodeDir {
 		t.Fatalf("expected 1 library node, got %+v", libs)
 	}
 	// series dir
-	series, _ := nodes.ListChildren(ctx, libs[0].ID)
+	series, _ := nodes.ListChildren(ctx, libs[0].ID, -1, 0)
 	if len(series) != 1 || series[0].Type != store.NodeDir {
 		t.Fatalf("series children = %+v", series)
 	}
 	// comic
-	kids, _ := nodes.ListChildren(ctx, series[0].ID)
+	kids, _ := nodes.ListChildren(ctx, series[0].ID, -1, 0)
 	if len(kids) != 1 || kids[0].Type != store.NodeComic {
 		t.Fatalf("comic children = %+v", kids)
 	}
@@ -100,11 +100,11 @@ func TestScanRemovesDeletedFiles(t *testing.T) {
 	sc.Scan(ctx)
 
 	// After first scan: 1 library node containing 1 comic
-	libs, _ := nodes.ListChildren(ctx, 0)
+	libs, _ := nodes.ListChildren(ctx, 0, -1, 0)
 	if len(libs) != 1 {
 		t.Fatalf("expected 1 library root after first scan, got %d", len(libs))
 	}
-	kids, _ := nodes.ListChildren(ctx, libs[0].ID)
+	kids, _ := nodes.ListChildren(ctx, libs[0].ID, -1, 0)
 	if len(kids) != 1 {
 		t.Fatalf("expected 1 comic after first scan, got %d", len(kids))
 	}
@@ -114,7 +114,7 @@ func TestScanRemovesDeletedFiles(t *testing.T) {
 	sc.Scan(ctx)
 
 	// Comic should be gone; library node still present (it's still configured)
-	kids2, _ := nodes.ListChildren(ctx, libs[0].ID)
+	kids2, _ := nodes.ListChildren(ctx, libs[0].ID, -1, 0)
 	if len(kids2) != 0 {
 		t.Fatalf("expected 0 comics after delete, got %d", len(kids2))
 	}
@@ -133,11 +133,11 @@ func TestScanIsIdempotent(t *testing.T) {
 	sc.Scan(ctx)
 
 	// Still 1 library node with 1 comic child
-	libs, _ := nodes.ListChildren(ctx, 0)
+	libs, _ := nodes.ListChildren(ctx, 0, -1, 0)
 	if len(libs) != 1 {
 		t.Fatalf("expected 1 library node after double scan, got %d", len(libs))
 	}
-	kids, _ := nodes.ListChildren(ctx, libs[0].ID)
+	kids, _ := nodes.ListChildren(ctx, libs[0].ID, -1, 0)
 	if len(kids) != 1 {
 		t.Fatalf("expected 1 comic node after double scan, got %d", len(kids))
 	}
@@ -156,7 +156,7 @@ func TestScanMultipleLibraries(t *testing.T) {
 	if err := sc.Scan(ctx); err != nil {
 		t.Fatal(err)
 	}
-	roots, _ := nodes.ListChildren(ctx, 0)
+	roots, _ := nodes.ListChildren(ctx, 0, -1, 0)
 	if len(roots) != 2 {
 		t.Fatalf("expected 2 top-level library nodes, got %d", len(roots))
 	}
@@ -166,7 +166,7 @@ func TestScanMultipleLibraries(t *testing.T) {
 	}
 	// each library node has its comic child
 	for _, root := range roots {
-		kids, _ := nodes.ListChildren(ctx, root.ID)
+		kids, _ := nodes.ListChildren(ctx, root.ID, -1, 0)
 		if len(kids) != 1 || kids[0].Type != store.NodeComic {
 			t.Fatalf("library %s children = %+v", root.Name, kids)
 		}
@@ -180,12 +180,12 @@ func TestScanRemovesDeconfiguredLibrary(t *testing.T) {
 	writeZip(t, filepath.Join(lib, "a.zip"), map[string][]byte{"001.png": pngBytes(t)})
 	lp, _ := paths.Add(ctx, "Lib", lib)
 	sc.Scan(ctx)
-	if roots, _ := nodes.ListChildren(ctx, 0); len(roots) != 1 {
+	if roots, _ := nodes.ListChildren(ctx, 0, -1, 0); len(roots) != 1 {
 		t.Fatalf("expected 1 root after add")
 	}
 	paths.Delete(ctx, lp.ID)
 	sc.Scan(ctx)
-	if roots, _ := nodes.ListChildren(ctx, 0); len(roots) != 0 {
+	if roots, _ := nodes.ListChildren(ctx, 0, -1, 0); len(roots) != 0 {
 		t.Fatalf("expected 0 roots after delete, got %d", len(roots))
 	}
 }
@@ -199,7 +199,7 @@ func TestScanRenamesLibraryNode(t *testing.T) {
 	sc.Scan(ctx)
 	paths.Rename(ctx, lp.ID, "New")
 	sc.Scan(ctx)
-	roots, _ := nodes.ListChildren(ctx, 0)
+	roots, _ := nodes.ListChildren(ctx, 0, -1, 0)
 	if len(roots) != 1 || roots[0].Name != "New" {
 		t.Fatalf("expected renamed node, got %+v", roots)
 	}
@@ -221,13 +221,13 @@ func writeTestZip(t *testing.T, path string, names []string) {
 func pageCountOf(t *testing.T, repo *store.NodeRepo, comicPath string) int {
 	t.Helper()
 	ctx := context.Background()
-	roots, err := repo.ListChildren(ctx, 0)
+	roots, err := repo.ListChildren(ctx, 0, -1, 0)
 	if err != nil {
 		t.Fatalf("pageCountOf: list roots: %v", err)
 	}
 	var search func(parentID int64) *store.Node
 	search = func(parentID int64) *store.Node {
-		kids, err := repo.ListChildren(ctx, parentID)
+		kids, err := repo.ListChildren(ctx, parentID, -1, 0)
 		if err != nil {
 			return nil
 		}
