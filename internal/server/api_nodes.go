@@ -69,6 +69,7 @@ type comicDetailDTO struct {
 	LastPage         int          `json:"lastPage"`
 	Tags             []*store.Tag `json:"tags"`
 	ReadingDirection string       `json:"readingDirection"`
+	DisplayMode      string       `json:"displayMode"`
 }
 
 func (s *Server) apiComicDetail(c echo.Context) error {
@@ -90,6 +91,7 @@ func (s *Server) apiComicDetail(c echo.Context) error {
 		ID: n.ID, Name: n.Name, Author: n.Author, Rating: n.Rating,
 		PageCount: n.PageCount, LastPage: last, Tags: tags,
 		ReadingDirection: n.ReadingDirection,
+		DisplayMode:      n.DisplayMode,
 	})
 }
 

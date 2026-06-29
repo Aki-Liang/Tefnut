@@ -16,6 +16,7 @@ type metaReq struct {
 	Author           *string `json:"author"`
 	Rating           *int    `json:"rating"`
 	ReadingDirection *string `json:"readingDirection"`
+	DisplayMode      *string `json:"displayMode"`
 }
 
 func (s *Server) apiUpdateMeta(c echo.Context) error {
@@ -61,6 +62,15 @@ func (s *Server) apiUpdateMeta(c echo.Context) error {
 	// update; acceptable for this home app.
 	if body.ReadingDirection != nil {
 		if err := s.nodes.UpdateReadingDirection(ctx, id, *body.ReadingDirection); err != nil {
+			return fail(c, http.StatusInternalServerError, err)
+		}
+	}
+	if body.DisplayMode != nil {
+		m := *body.DisplayMode
+		if m != "single" && m != "continuous" && m != "spread" {
+			return fail(c, http.StatusBadRequest, errors.New("displayMode must be single, continuous, or spread"))
+		}
+		if err := s.nodes.UpdateDisplayMode(ctx, id, m); err != nil {
 			return fail(c, http.StatusInternalServerError, err)
 		}
 	}
