@@ -1,7 +1,8 @@
-const initial = JSON.parse(document.getElementById('scan-data').textContent);
+const sd = document.getElementById('scan-data').dataset;
+const initial = { mode: sd.mode || 'interval', interval: sd.interval || '', daily: sd.daily || '' };
 
-// reflect current scan settings into the form
-document.querySelector(`input[name="mode"][value="${initial.mode}"]`).checked = true;
+// reflect current scan settings into the form (iterate radios; no string-interpolated selector)
+document.querySelectorAll('input[name="mode"]').forEach(r => { r.checked = (r.value === initial.mode); });
 document.getElementById('iv').value = initial.interval;
 document.getElementById('daily').value = initial.daily;
 

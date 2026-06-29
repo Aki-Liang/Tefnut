@@ -28,6 +28,6 @@
   </form>
 </section>
 
-<script id="scan-data" type="application/json">{"mode":"{{.ScanMode}}","interval":"{{.ScanInterval}}","daily":"{{.ScanDailyTime}}"}</script>
+<div id="scan-data" data-mode="{{.ScanMode}}" data-interval="{{.ScanInterval}}" data-daily="{{.ScanDailyTime}}" hidden></div>
 {{end}}
 {{define "scripts"}}<script src="/static/js/settings.js"></script>{{end}}
