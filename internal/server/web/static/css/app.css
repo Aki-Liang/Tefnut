@@ -79,9 +79,9 @@ h2 { font-size: 19px; margin: 0 0 12px; color: var(--paper); }
   padding-left: 42px; margin-bottom: 22px;
   position: relative;
 }
-.sidebar .brand::after { /* the 印 seal dot */
-  content: ""; position: absolute; bottom: 4px; margin-left: 3px;
-  width: 8px; height: 8px; border-radius: 2px; background: var(--seal);
+.sidebar .brand::after { /* deliberate seal underline under the wordmark */
+  content: ""; display: block; width: 30px; height: 3px;
+  margin: 7px 0 0 0; background: var(--seal);
 }
 .sidebar nav { display: flex; flex-direction: column; gap: 2px; }
 .sidebar nav a {
