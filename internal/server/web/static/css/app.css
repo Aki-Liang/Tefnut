@@ -10,11 +10,11 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #14161a; color
 .name { margin-top: 6px; font-size: 13px; word-break: break-all; }
 .stars { font-size: 12px; color: #f5c518; }
 .empty { color: #888; }
-.reader-stage { position: relative; display: flex; justify-content: center; align-items: center; min-height: 70vh; }
-#page { max-height: 85vh; max-width: 100%; }
+.reader-stage { position: relative; display: flex; justify-content: center; align-items: center; flex: 1 1 auto; min-height: 0; overflow: hidden; }
+#page { max-height: 100%; max-width: 100%; }
 .nav { position: absolute; top: 0; bottom: 0; width: 25%; background: transparent; border: 0; font-size: 40px; cursor: pointer; }
 .nav.prev { left: 0; } .nav.next { right: 0; }
-.reader-bar { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; padding: 10px; background: #1c1f26; }
+.reader-bar { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; padding: 10px; background: #1c1f26; flex: 0 0 auto; }
 .reader-bar input, .reader-bar select { background: #222; color: #eee; border: 1px solid #333; border-radius: 6px; padding: 4px 8px; }
 .tags .tag { display: inline-flex; gap: 4px; background: #2a2f3a; padding: 2px 8px; border-radius: 12px; margin: 2px; }
 .tags .tag button { background: none; border: 0; color: #f88; cursor: pointer; }
@@ -29,7 +29,8 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #14161a; color
 .sidebar nav a:hover { background: #262b35; }
 .sidebar nav a.active { background: #2f3645; color: #fff; }
 main.with-sidebar { margin-left: 180px; padding: 20px; }
-main.reader-main { margin-left: 0; padding: 0; }
+main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; }
+#reader { display: flex; flex-direction: column; height: 100%; }
 
 /* visible reader paging buttons */
 .nav { background: rgba(40,46,58,0.55); color: #fff; }
@@ -62,10 +63,10 @@ main.reader-main { margin-left: 0; padding: 0; }
 .sidebar .brand { padding-left: 40px; }
 main.with-sidebar { transition: margin-left 0.2s ease; }
 .sidebar-collapsed .sidebar { transform: translateX(-100%); }
-.sidebar-collapsed main.with-sidebar { margin-left: 0; }
+.sidebar-collapsed main.with-sidebar { margin-left: 0; padding-left: 56px; }
 
 /* thumbnail strip + direction toggle */
-.thumbstrip { position: relative; background: #1a1d24; border-top: 1px solid #2a2f3a; }
+.thumbstrip { position: relative; background: #1a1d24; border-top: 1px solid #2a2f3a; flex: 0 0 auto; }
 .strip-toggle { position: absolute; top: -22px; left: 50%; transform: translateX(-50%); background: #2a2f3a; color: #eee; border: 1px solid #3a4150; border-bottom: 0; border-radius: 6px 6px 0 0; width: 44px; height: 22px; cursor: pointer; font-size: 12px; }
 .thumbs { display: flex; gap: 6px; overflow-x: auto; padding: 8px; height: 96px; }
 .thumbs.rtl { flex-direction: row-reverse; }
