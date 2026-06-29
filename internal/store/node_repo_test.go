@@ -118,3 +118,38 @@ func TestUpdateDisplayMode(t *testing.T) {
 		t.Fatalf("display_mode = %q, want spread", got.DisplayMode)
 	}
 }
+
+func TestNodeScanTargetsMatchColumnNames(t *testing.T) {
+	n := &Node{}
+	if got := len(nodeScanTargets(n)); got != len(nodeColNames) {
+		t.Fatalf("scan targets = %d, column names = %d", got, len(nodeColNames))
+	}
+}
+
+func TestSearchAndGetReturnSameFields(t *testing.T) {
+	repo := NewNodeRepo(openTemp(t))
+	ctx := context.Background()
+	created, err := repo.Create(ctx, &Node{ParentID: 0, Name: "Alpha", Path: "/a.cbz", Type: NodeComic, Author: "Me", Rating: 4})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.UpdateFileAttrs(ctx, created.ID, 10, 20, 7, CoverReady); err != nil {
+		t.Fatal(err)
+	}
+	viaGet, err := repo.Get(ctx, created.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	results, err := repo.Search(ctx, "Alpha", 0, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != 1 {
+		t.Fatalf("search returned %d, want 1", len(results))
+	}
+	viaSearch := results[0]
+	// Every field that crosses the column boundary must match between paths.
+	if *viaGet != *viaSearch {
+		t.Fatalf("Get vs Search node mismatch:\n get=%+v\n srch=%+v", viaGet, viaSearch)
+	}
+}
