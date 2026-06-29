@@ -55,6 +55,10 @@ func (s *Server) apiUpdateMeta(c echo.Context) error {
 	if err := s.nodes.UpdateMeta(ctx, id, author, rating); err != nil {
 		return fail(c, http.StatusInternalServerError, err)
 	}
+	// Note: author/rating (UpdateMeta) and readingDirection are separate writes,
+	// not one transaction. A partial failure between them leaves a split state
+	// (a 500 is surfaced). Extremely low probability on a local single-row SQLite
+	// update; acceptable for this home app.
 	if body.ReadingDirection != nil {
 		if err := s.nodes.UpdateReadingDirection(ctx, id, *body.ReadingDirection); err != nil {
 			return fail(c, http.StatusInternalServerError, err)

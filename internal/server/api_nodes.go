@@ -163,6 +163,11 @@ func (s *Server) apiPageThumb(c echo.Context) error {
 		return fail(c, http.StatusInternalServerError, err)
 	}
 	cacheDir := filepath.Join(s.dataDir, "cache", strconv.FormatInt(id, 10))
+	// Each thumbnail request opens the archive fresh. For zip/cbz this only
+	// reads the (small) central directory, the decode/resize dominates and is
+	// inherent, the frontend lazy-loads only visible thumbs (IntersectionObserver),
+	// and generated thumbs are served from the in-memory cache + browser cache
+	// (Cache-Control). Acceptable for a single-user home library.
 	r, err := archive.Open(ctx, n.Path, cacheDir)
 	if err != nil {
 		return fail(c, http.StatusInternalServerError, err)

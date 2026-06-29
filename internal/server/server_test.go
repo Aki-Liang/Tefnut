@@ -151,8 +151,27 @@ func TestApiPageThumb(t *testing.T) {
 	if ct := rec.Header().Get("Content-Type"); ct != "image/jpeg" {
 		t.Fatalf("content-type=%s", ct)
 	}
-	if rec.Header().Get("Cache-Control") == "" {
-		t.Fatal("expected Cache-Control header")
+	if cc := rec.Header().Get("Cache-Control"); cc != "public, max-age=86400" {
+		t.Fatalf("Cache-Control=%q", cc)
+	}
+}
+
+func TestApiPageThumbCacheHit(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	url := "/api/comics/" + itoa(n.ID) + "/pages/0/thumb"
+	for i := 0; i < 2; i++ {
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, url, nil))
+		if rec.Code != 200 {
+			t.Fatalf("attempt %d: status=%d body=%s", i, rec.Code, rec.Body.String())
+		}
+		if ct := rec.Header().Get("Content-Type"); ct != "image/jpeg" {
+			t.Fatalf("attempt %d: content-type=%s", i, ct)
+		}
+		if rec.Header().Get("Cache-Control") != "public, max-age=86400" {
+			t.Fatalf("attempt %d: missing/wrong Cache-Control", i)
+		}
 	}
 }
 

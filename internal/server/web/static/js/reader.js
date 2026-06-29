@@ -106,6 +106,7 @@ document.getElementById('dirtoggle').onclick = () => {
   }).then(r => {
     if (!r.ok) { alert('切换方向失败'); return; }
     dir = next;
+    el.dataset.dir = next;
     applyDirLabel();
     bindControls();
     buildStrip();
