@@ -11,6 +11,7 @@ import (
 
 	"Tefnut/internal/archive"
 	"Tefnut/internal/store"
+	"Tefnut/internal/thumb"
 )
 
 type nodeDTO struct {
@@ -135,4 +136,50 @@ func (s *Server) apiPage(c echo.Context) error {
 	}
 	defer rc.Close()
 	return c.Stream(http.StatusOK, contentType(names[pageNum]), rc)
+}
+
+func (s *Server) apiPageThumb(c echo.Context) error {
+	ctx := c.Request().Context()
+	id, err := parseID(c, "id")
+	if err != nil {
+		return fail(c, http.StatusBadRequest, err)
+	}
+	pageNum, err := strconv.Atoi(c.Param("n"))
+	if err != nil || pageNum < 0 {
+		return fail(c, http.StatusBadRequest, fmt.Errorf("invalid page"))
+	}
+	key := strconv.FormatInt(id, 10) + ":" + strconv.Itoa(pageNum)
+	if b, ok := s.thumbs.get(key); ok {
+		c.Response().Header().Set("Cache-Control", "public, max-age=86400")
+		return c.Blob(http.StatusOK, "image/jpeg", b)
+	}
+	n, err := s.nodes.Get(ctx, id)
+	if errors.Is(err, store.ErrNotFound) {
+		return fail(c, http.StatusNotFound, err)
+	}
+	if err != nil {
+		return fail(c, http.StatusInternalServerError, err)
+	}
+	cacheDir := filepath.Join(s.dataDir, "cache", strconv.FormatInt(id, 10))
+	r, err := archive.Open(ctx, n.Path, cacheDir)
+	if err != nil {
+		return fail(c, http.StatusInternalServerError, err)
+	}
+	defer r.Close()
+	names := r.List()
+	if pageNum >= len(names) {
+		return fail(c, http.StatusNotFound, fmt.Errorf("page out of range"))
+	}
+	rc, err := r.Open(names[pageNum])
+	if err != nil {
+		return fail(c, http.StatusInternalServerError, err)
+	}
+	defer rc.Close()
+	data, err := thumb.Generate(rc, 120)
+	if err != nil {
+		return fail(c, http.StatusInternalServerError, err)
+	}
+	s.thumbs.put(key, data)
+	c.Response().Header().Set("Cache-Control", "public, max-age=86400")
+	return c.Blob(http.StatusOK, "image/jpeg", data)
 }

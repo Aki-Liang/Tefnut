@@ -23,13 +23,15 @@ type Server struct {
 	reconf     Reconfigurer
 	dataDir    string
 	thumbWidth int
+	thumbs     *thumbCache
 }
 
 func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.ProgressRepo,
 	settings *store.SettingsRepo, paths *store.LibraryPathRepo, reconf Reconfigurer,
 	dataDir string, thumbWidth int) *Server {
 	return &Server{nodes: nodes, tags: tags, progress: progress, settings: settings,
-		paths: paths, reconf: reconf, dataDir: dataDir, thumbWidth: thumbWidth}
+		paths: paths, reconf: reconf, dataDir: dataDir, thumbWidth: thumbWidth,
+		thumbs: newThumbCache(256)}
 }
 
 // Register wires routes and static assets onto e.
@@ -50,6 +52,7 @@ func (s *Server) Register(e *echo.Echo) {
 	api.GET("/comics/:id", s.apiComicDetail)
 	api.GET("/comics/:id/cover", s.apiCover)
 	api.GET("/comics/:id/pages/:n", s.apiPage)
+	api.GET("/comics/:id/pages/:n/thumb", s.apiPageThumb)
 	api.PATCH("/comics/:id", s.apiUpdateMeta)
 	api.POST("/comics/:id/tags", s.apiAddTag)
 	api.DELETE("/comics/:id/tags/:tagId", s.apiRemoveTag)

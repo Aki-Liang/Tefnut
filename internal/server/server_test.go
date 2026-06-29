@@ -139,6 +139,34 @@ func TestApiComicDetailTagsLowercase(t *testing.T) {
 
 func itoa(i int64) string { return strconv.FormatInt(i, 10) }
 
+func TestApiPageThumb(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	req := httptest.NewRequest(http.MethodGet, "/api/comics/"+itoa(n.ID)+"/pages/0/thumb", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if ct := rec.Header().Get("Content-Type"); ct != "image/jpeg" {
+		t.Fatalf("content-type=%s", ct)
+	}
+	if rec.Header().Get("Cache-Control") == "" {
+		t.Fatal("expected Cache-Control header")
+	}
+}
+
+func TestApiPageThumbOutOfRange(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	req := httptest.NewRequest(http.MethodGet, "/api/comics/"+itoa(n.ID)+"/pages/999/thumb", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", rec.Code)
+	}
+}
+
 func TestApiSetProgress(t *testing.T) {
 	s, e, db := newTestServer(t)
 	n := seedComic(t, db, s.dataDir)
