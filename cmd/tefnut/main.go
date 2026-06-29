@@ -8,10 +8,10 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/robfig/cron/v3"
 
 	"Tefnut/internal/config"
 	"Tefnut/internal/library"
+	"Tefnut/internal/scan"
 	"Tefnut/internal/server"
 	"Tefnut/internal/store"
 )
@@ -36,7 +36,6 @@ func main() {
 	progress := store.NewProgressRepo(db)
 
 	settingsRepo := store.NewSettingsRepo(db)
-	_ = settingsRepo
 	pathRepo := store.NewLibraryPathRepo(db)
 
 	// First-run seed: import the yaml rootPath as the first library.
@@ -48,23 +47,11 @@ func main() {
 
 	scanner := library.NewScanner(nodes, pathRepo, cfg.DataDir, cfg.Thumbnail.Width)
 
-	// Startup scan (blocking once, so the library is populated before serving).
-	if err := scanner.Scan(context.Background()); err != nil {
-		log.Printf("initial scan: %v", err)
+	manager := scan.New(scanner, settingsRepo, pathRepo)
+	if err := manager.Start(context.Background()); err != nil {
+		log.Printf("scan manager start: %v", err)
 	}
-
-	// Periodic scan.
-	interval, _ := cfg.ScanInterval()
-	c := cron.New()
-	if _, err := c.AddFunc("@every "+interval.String(), func() {
-		if err := scanner.Scan(context.Background()); err != nil {
-			log.Printf("scan: %v", err)
-		}
-	}); err != nil {
-		log.Fatalf("cron schedule: %v", err)
-	}
-	c.Start()
-	defer c.Stop()
+	defer manager.Stop()
 
 	srv := server.NewServer(nodes, tags, progress, cfg.DataDir, cfg.Thumbnail.Width)
 
