@@ -44,10 +44,10 @@ display_mode TEXT NOT NULL DEFAULT 'single'   -- 'single' | 'continuous' | 'spre
 
 ### 5.2 spread
 - 舞台并排显示 1–2 张图。配对：第 0 页单独成"对"，其后 `(1,2)(3,4)…`。
-- "前进/后退"以**对**为单位移动。
+- **翻页步进**：默认**一次翻两页**（整对翻：`[0]→[1,2]→[3,4]…`）。spread 模式下阅读栏额外提供一个**步进切换**（`两页 / 一页`）；切到"一页"时，每次翻页让两页窗口**位移一页、重新配对**（`[1,2]→[2,3]→[3,4]…`），用于微调跨页对齐。步进偏好存 `localStorage`（键 `spreadStep`，默认 `2`），**纯前端、无需后端改动**。
 - **方向决定左右顺序**：LTR 时小页号在左、大页号在右；RTL 时小页号在右、大页号在左。
-- 点击区 / 键盘 / 底部按钮按方向前进/后退一对；缩略图点击跳到该页所在的对。
-- 进度 = 当前对的首页（较小页号）。
+- 点击区 / 键盘 / 底部按钮按方向 + 当前步进前进/后退；缩略图点击跳到该页所在的对。
+- 进度 = 当前所显示对的首页（较小页号）。
 
 ### 5.3 continuous
 - 舞台变为**竖向滚动容器**，全部页竖排堆叠，IntersectionObserver **懒加载**仅接近视口的页。
@@ -77,7 +77,7 @@ display_mode TEXT NOT NULL DEFAULT 'single'   -- 'single' | 'continuous' | 'spre
 1. **store**：迁移 + 列 + 字段 + `UpdateDisplayMode` + 三处同步 + 单测。
 2. **API**：detail 加 `displayMode`、PATCH 加 `displayMode` + 测试。
 3. **阅读器模式框架**：`#modetoggle` 控件 + `data-mode` + 把现有单页逻辑重构进 `setMode/goTo/advance/back` 框架（single 行为不变）+ 渲染测试。
-4. **spread 模式**：并排布局 + 配对 + 方向排序。
+4. **spread 模式**：并排布局 + 配对 + 方向排序 + 翻页步进切换（两页/一页，localStorage）。
 5. **continuous 模式**：竖向滚动 + 懒加载 + 滚动进度 + 隐藏方向控件 + 收尾。
 
 每个里程碑可独立编译运行与测试。
