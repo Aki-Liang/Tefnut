@@ -216,13 +216,15 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
 #page { max-height: 100%; max-width: 100%; box-shadow: 0 0 0 1px var(--line); }
 
 .nav {
-  position: absolute; top: 0; bottom: 0; width: 22%;
-  background: transparent; border: 0; color: rgba(242,236,221,0.55);
-  font-size: 44px; cursor: pointer; transition: background 0.12s ease, color 0.12s ease;
+  position: absolute; top: 0; bottom: 0; width: 20%;
+  display: flex; align-items: center;
+  background: transparent; border: 0; color: rgba(230,237,243,0.28);
+  font-size: 40px; cursor: pointer; transition: background 0.12s ease, color 0.12s ease;
 }
-.nav.prev { left: 0; } .nav.next { right: 0; }
-.nav:hover { background: linear-gradient(90deg, rgba(226,72,61,0.18), transparent); color: var(--seal); }
-.nav.next:hover { background: linear-gradient(270deg, rgba(226,72,61,0.18), transparent); }
+.nav.prev { left: 0; justify-content: flex-start; padding-left: 16px; }
+.nav.next { right: 0; justify-content: flex-end; padding-right: 16px; }
+.nav:hover { background: linear-gradient(90deg, rgba(56,189,248,0.10), transparent); color: rgba(230,237,243,0.72); }
+.nav.next:hover { background: linear-gradient(270deg, rgba(56,189,248,0.10), transparent); }
 
 .reader-bar {
   display: flex; gap: 14px; flex-wrap: wrap; align-items: center;
@@ -232,6 +234,14 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
 .reader-bar .back { color: var(--muted); text-decoration: none; margin-right: 4px; font-family: var(--font-mono); font-size: 13px; }
 .reader-bar .back:hover { color: var(--seal); }
 .reader-bar input, .reader-bar select { background: var(--ink); color: var(--paper); border: 2px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+
+/* unify <select> chrome across browsers: kill the native glossy look, add a cool caret */
+.toolbar select, .card-box select, .reader-bar select {
+  -webkit-appearance: none; appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'><path d='M1 1l5 5 5-5' fill='none' stroke='%238593a4' stroke-width='1.6' stroke-linecap='round'/></svg>");
+  background-repeat: no-repeat; background-position: right 9px center;
+  padding-right: 28px; cursor: pointer;
+}
 .reader-bar .meta label { color: var(--muted); font-size: 13px; }
 #counter { font-family: var(--font-mono); font-size: 14px; color: var(--paper); min-width: 64px; text-align: center; }
 
