@@ -47,3 +47,12 @@ func TestGenerateRejectsGarbage(t *testing.T) {
 		t.Fatal("expected decode error")
 	}
 }
+
+func TestPixelBudget(t *testing.T) {
+	if withinPixelBudget(10000, 10000) { // 100,000,000 px == 100MP, over budget
+		t.Fatal("100MP should be over budget")
+	}
+	if !withinPixelBudget(4000, 6000) { // 24MP, fine
+		t.Fatal("24MP should be within budget")
+	}
+}

@@ -212,7 +212,9 @@ func (s *Server) apiPageThumb(c echo.Context) error {
 	}
 	defer release()
 	defer rc.Close()
+	s.decodeSem <- struct{}{}
 	data, err := thumb.Generate(rc, s.pageThumbWidth)
+	<-s.decodeSem
 	if err != nil {
 		return fail(c, http.StatusInternalServerError, err)
 	}

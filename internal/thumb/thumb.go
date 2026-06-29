@@ -21,13 +21,36 @@ func init() {
 	_ = bmp.Decode
 }
 
+// maxPixels caps the source image area we will decode (guards against
+// decompression/pixel-flood bombs). 80 MP comfortably exceeds real comic pages.
+const maxPixels = 80 * 1000 * 1000
+
+func withinPixelBudget(w, h int) bool {
+	if w <= 0 || h <= 0 {
+		return false
+	}
+	return int64(w)*int64(h) <= maxPixels
+}
+
 // Generate decodes src, scales it to width px wide (preserving aspect ratio),
-// and returns JPEG-encoded bytes.
+// and returns JPEG-encoded bytes. It rejects images whose pixel count exceeds
+// maxPixels to guard against decompression-bomb attacks.
 func Generate(src io.Reader, width int) ([]byte, error) {
 	if width <= 0 {
 		return nil, fmt.Errorf("thumb: width must be > 0")
 	}
-	img, _, err := image.Decode(src)
+	raw, err := io.ReadAll(src)
+	if err != nil {
+		return nil, fmt.Errorf("thumb: read source: %w", err)
+	}
+	cfg, _, err := image.DecodeConfig(bytes.NewReader(raw))
+	if err != nil {
+		return nil, fmt.Errorf("thumb: decode config: %w", err)
+	}
+	if !withinPixelBudget(cfg.Width, cfg.Height) {
+		return nil, fmt.Errorf("thumb: image too large (%dx%d)", cfg.Width, cfg.Height)
+	}
+	img, _, err := image.Decode(bytes.NewReader(raw))
 	if err != nil {
 		return nil, fmt.Errorf("thumb: decode: %w", err)
 	}

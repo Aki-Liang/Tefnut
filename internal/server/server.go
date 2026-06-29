@@ -12,6 +12,7 @@ import (
 )
 
 const archiveCacheSize = 8
+const decodeConcurrency = 4
 
 // Reconfigurer is satisfied by *scan.Manager via its Reconfigure method.
 type Reconfigurer interface {
@@ -30,6 +31,7 @@ type Server struct {
 	pageThumbWidth int
 	thumbs         *thumbCache
 	readers        *archive.ReaderCache
+	decodeSem      chan struct{}
 }
 
 const thumbCacheMaxEntries = 512
@@ -43,7 +45,8 @@ func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.Progr
 	return &Server{nodes: nodes, tags: tags, progress: progress, settings: settings,
 		paths: paths, reconf: reconf, dataDir: dataDir, thumbWidth: thumbWidth,
 		pageThumbWidth: pageThumbWidth,
-		thumbs:         tc, readers: archive.NewReaderCache(archiveCacheSize)}
+		thumbs:         tc, readers: archive.NewReaderCache(archiveCacheSize),
+		decodeSem: make(chan struct{}, decodeConcurrency)}
 }
 
 // Register wires routes and static assets onto e.
