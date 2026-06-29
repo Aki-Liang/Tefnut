@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"net/http"
 
 	"github.com/labstack/echo/v4"
 
@@ -65,5 +64,4 @@ func (s *Server) Register(e *echo.Echo) {
 	api.POST("/settings/paths", s.apiAddPath)
 	api.DELETE("/settings/paths/:id", s.apiDeletePath)
 
-	_ = http.StatusOK
 }

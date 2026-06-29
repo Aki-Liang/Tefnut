@@ -357,6 +357,31 @@ func TestApiAddPathRejectsMissingDir(t *testing.T) {
 	}
 }
 
+func TestSettingsUpdateTriggersReconfigure(t *testing.T) {
+	data := t.TempDir()
+	db, err := store.Open(filepath.Join(data, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	rc := &stubReconf{}
+	s := NewServer(store.NewNodeRepo(db), store.NewTagRepo(db), store.NewProgressRepo(db),
+		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), rc, data, 400)
+	e := echo.New()
+	s.Register(e)
+	req := httptest.NewRequest(http.MethodPut, "/api/settings",
+		strings.NewReader(`{"scanMode":"watch","scanInterval":"2m","scanDailyTime":"03:00"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if rc.calls != 1 {
+		t.Fatalf("expected Reconfigure called once, got %d", rc.calls)
+	}
+}
+
 func TestPageSettingsRenders(t *testing.T) {
 	_, e, _ := newTestServer(t)
 	rec := httptest.NewRecorder()

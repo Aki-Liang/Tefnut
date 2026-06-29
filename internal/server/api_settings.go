@@ -134,6 +134,9 @@ func (s *Server) apiDeletePath(c echo.Context) error {
 		return fail(c, http.StatusBadRequest, errors.New("invalid id"))
 	}
 	if err := s.paths.Delete(ctx, id); err != nil {
+		if errors.Is(err, store.ErrNotFound) {
+			return fail(c, http.StatusNotFound, err)
+		}
 		return fail(c, http.StatusInternalServerError, err)
 	}
 	if err := s.reconf.Reconfigure(ctx); err != nil {

@@ -77,9 +77,16 @@ func (r *LibraryPathRepo) Rename(ctx context.Context, id int64, name string) err
 }
 
 func (r *LibraryPathRepo) Delete(ctx context.Context, id int64) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM library_paths WHERE id = ?`, id)
+	res, err := r.db.ExecContext(ctx, `DELETE FROM library_paths WHERE id = ?`, id)
 	if err != nil {
 		return fmt.Errorf("store: delete library path %d: %w", id, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("store: delete library path %d rows: %w", id, err)
+	}
+	if n == 0 {
+		return ErrNotFound
 	}
 	return nil
 }

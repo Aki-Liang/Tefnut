@@ -92,3 +92,24 @@ func TestReconfigureTriggersScan(t *testing.T) {
 		t.Fatal("reconfigure did not trigger a scan")
 	}
 }
+
+func TestReconfigureUsesBaseContextNotRequestContext(t *testing.T) {
+	settings, paths := newRepos(t)
+	fs := &fakeScanner{ch: make(chan struct{}, 4)}
+	m := New(fs, settings, paths)
+	m.Start(context.Background())
+	defer m.Stop()
+	<-fs.ch // initial scan
+	// Caller passes an ALREADY-CANCELLED request context:
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := m.Reconfigure(ctx); err != nil {
+		t.Fatal(err)
+	}
+	select {
+	case <-fs.ch:
+		// good: scan ran despite the cancelled request ctx (it used baseCtx)
+	case <-time.After(2 * time.Second):
+		t.Fatal("reconfigure rescan did not run — it must use the base context, not the cancelled request context")
+	}
+}

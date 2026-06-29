@@ -25,6 +25,7 @@ type Manager struct {
 	paths    *store.LibraryPathRepo
 
 	mu       sync.Mutex
+	baseCtx  context.Context
 	cron     *cron.Cron
 	stopMode func() // tears down the current mode (cron stop / watcher close)
 	debounce time.Duration
@@ -36,20 +37,36 @@ func New(sc Scanner, settings *store.SettingsRepo, paths *store.LibraryPathRepo)
 
 // Start runs one blocking scan, then starts the active mode.
 func (m *Manager) Start(ctx context.Context) error {
+	m.mu.Lock()
+	m.baseCtx = ctx
+	m.mu.Unlock()
+
 	if err := m.scanner.Scan(ctx); err != nil {
 		log.Printf("scan: initial scan: %v", err)
 	}
-	return m.applyMode(ctx)
+	return m.applyMode()
+}
+
+// baseContext returns the long-lived context set by Start, or context.Background() as fallback.
+func (m *Manager) baseContext() context.Context {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.baseCtx == nil {
+		return context.Background()
+	}
+	return m.baseCtx
 }
 
 // Reconfigure tears down the current mode, starts the mode from current
 // settings, then triggers an async rescan.
+// ctx is accepted for interface compatibility but must NOT be used for scan/scheduled work.
 func (m *Manager) Reconfigure(ctx context.Context) error {
-	if err := m.applyMode(ctx); err != nil {
+	if err := m.applyMode(); err != nil {
 		return err
 	}
+	base := m.baseContext()
 	go func() {
-		if err := m.scanner.Scan(ctx); err != nil {
+		if err := m.scanner.Scan(base); err != nil {
 			log.Printf("scan: reconfigure rescan: %v", err)
 		}
 	}()
@@ -70,19 +87,24 @@ func (m *Manager) teardownLocked() {
 	m.cron = nil
 }
 
-func (m *Manager) applyMode(ctx context.Context) error {
+func (m *Manager) applyMode() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.teardownLocked()
 
-	settings, err := m.settings.GetScan(ctx)
+	base := m.baseCtx
+	if base == nil {
+		base = context.Background()
+	}
+
+	settings, err := m.settings.GetScan(base)
 	if err != nil {
 		return fmt.Errorf("scan: read settings: %w", err)
 	}
 
 	switch settings.Mode {
 	case "watch":
-		return m.startWatchLocked(ctx)
+		return m.startWatchLocked(base)
 	case "interval", "daily":
 		spec, err := cronSpec(settings)
 		if err != nil {
@@ -90,7 +112,7 @@ func (m *Manager) applyMode(ctx context.Context) error {
 		}
 		c := cron.New()
 		if _, err := c.AddFunc(spec, func() {
-			if err := m.scanner.Scan(ctx); err != nil {
+			if err := m.scanner.Scan(base); err != nil {
 				log.Printf("scan: scheduled scan: %v", err)
 			}
 		}); err != nil {
