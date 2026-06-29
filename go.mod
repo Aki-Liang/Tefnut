@@ -4,6 +4,7 @@ go 1.24
 
 require (
 	github.com/fsnotify/fsnotify v1.10.1
+	github.com/hashicorp/golang-lru/v2 v2.0.7
 	github.com/labstack/echo/v4 v4.7.2
 	github.com/mholt/archiver/v4 v4.0.0-alpha.7
 	github.com/robfig/cron/v3 v3.0.0
@@ -19,7 +20,6 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/klauspost/compress v1.15.5 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect
 	github.com/labstack/gommon v0.3.1 // indirect

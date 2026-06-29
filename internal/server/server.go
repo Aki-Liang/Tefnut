@@ -2,6 +2,7 @@ package server
 
 import (
 	"context"
+	"path/filepath"
 
 	"github.com/labstack/echo/v4"
 
@@ -18,24 +19,31 @@ type Reconfigurer interface {
 }
 
 type Server struct {
-	nodes      *store.NodeRepo
-	tags       *store.TagRepo
-	progress   *store.ProgressRepo
-	settings   *store.SettingsRepo
-	paths      *store.LibraryPathRepo
-	reconf     Reconfigurer
-	dataDir    string
-	thumbWidth int
-	thumbs     *thumbCache
-	readers    *archive.ReaderCache
+	nodes          *store.NodeRepo
+	tags           *store.TagRepo
+	progress       *store.ProgressRepo
+	settings       *store.SettingsRepo
+	paths          *store.LibraryPathRepo
+	reconf         Reconfigurer
+	dataDir        string
+	thumbWidth     int
+	pageThumbWidth int
+	thumbs         *thumbCache
+	readers        *archive.ReaderCache
 }
+
+const thumbCacheMaxEntries = 512
 
 func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.ProgressRepo,
 	settings *store.SettingsRepo, paths *store.LibraryPathRepo, reconf Reconfigurer,
-	dataDir string, thumbWidth int) *Server {
+	dataDir string, thumbWidth int, pageThumbWidth int) *Server {
+	// lru.New only errors on size<=0; thumbCacheMaxEntries is a positive
+	// constant, so the ignored error is safe.
+	tc, _ := newThumbCache(thumbCacheMaxEntries, filepath.Join(dataDir, "thumbs"))
 	return &Server{nodes: nodes, tags: tags, progress: progress, settings: settings,
 		paths: paths, reconf: reconf, dataDir: dataDir, thumbWidth: thumbWidth,
-		thumbs: newThumbCache(256), readers: archive.NewReaderCache(archiveCacheSize)}
+		pageThumbWidth: pageThumbWidth,
+		thumbs:         tc, readers: archive.NewReaderCache(archiveCacheSize)}
 }
 
 // Register wires routes and static assets onto e.

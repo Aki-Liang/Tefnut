@@ -1,38 +1,54 @@
 package server
 
-import "sync"
+import (
+	"os"
+	"path/filepath"
+	"strings"
 
-// thumbCache is a tiny bounded in-memory byte cache. When it would exceed max
-// entries it clears itself (simple, allocation-free eviction adequate for a
-// single-user home app).
+	lru "github.com/hashicorp/golang-lru/v2"
+)
+
+// thumbCache is a two-layer page-thumbnail cache: a bounded in-memory LRU in
+// front of durable per-page JPEG files under <dir>/pages/<id>/<n>.jpg.
 type thumbCache struct {
-	mu  sync.Mutex
-	m   map[string][]byte
-	max int
+	mem *lru.Cache[string, []byte]
+	dir string
 }
 
-func newThumbCache(max int) *thumbCache {
-	return &thumbCache{m: make(map[string][]byte), max: max}
+func newThumbCache(maxEntries int, dir string) (*thumbCache, error) {
+	mem, err := lru.New[string, []byte](maxEntries)
+	if err != nil {
+		return nil, err
+	}
+	return &thumbCache{mem: mem, dir: dir}, nil
+}
+
+// path maps "<id>:<n>" to <dir>/pages/<id>/<n>.jpg.
+func (c *thumbCache) path(key string) string {
+	id, n, ok := strings.Cut(key, ":")
+	if !ok {
+		id, n = "0", key
+	}
+	return filepath.Join(c.dir, "pages", id, n+".jpg")
 }
 
 func (c *thumbCache) get(key string) ([]byte, bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	b, ok := c.m[key]
-	return b, ok
-}
-
-func (c *thumbCache) put(key string, b []byte) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	if len(c.m) >= c.max {
-		c.m = make(map[string][]byte)
+	if b, ok := c.mem.Get(key); ok {
+		return b, true
 	}
-	c.m[key] = b
+	b, err := os.ReadFile(c.path(key))
+	if err != nil {
+		return nil, false
+	}
+	c.mem.Add(key, b)
+	return b, true
 }
 
-func (c *thumbCache) size() int {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	return len(c.m)
+func (c *thumbCache) put(key string, b []byte) error {
+	c.mem.Add(key, b)
+	p := c.path(key)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(p, b, 0o644)
 }

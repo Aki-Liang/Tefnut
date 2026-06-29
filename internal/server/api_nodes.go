@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -211,11 +212,13 @@ func (s *Server) apiPageThumb(c echo.Context) error {
 	}
 	defer release()
 	defer rc.Close()
-	data, err := thumb.Generate(rc, 120)
+	data, err := thumb.Generate(rc, s.pageThumbWidth)
 	if err != nil {
 		return fail(c, http.StatusInternalServerError, err)
 	}
-	s.thumbs.put(key, data)
+	if err := s.thumbs.put(key, data); err != nil {
+		log.Printf("server: persist thumb %s: %v", key, err)
+	}
 	c.Response().Header().Set("Cache-Control", "public, max-age=86400")
 	return c.Blob(http.StatusOK, "image/jpeg", data)
 }

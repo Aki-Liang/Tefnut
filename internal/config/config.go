@@ -22,7 +22,8 @@ type Scan struct {
 }
 
 type Thumbnail struct {
-	Width int `yaml:"width"`
+	Width     int `yaml:"width"`
+	PageWidth int `yaml:"pageWidth"`
 }
 
 type Config struct {
@@ -38,7 +39,7 @@ func defaults() *Config {
 		DataDir:   "./data",
 		Server:    Server{Addr: ":8086"},
 		Scan:      Scan{Interval: "2m"},
-		Thumbnail: Thumbnail{Width: 400},
+		Thumbnail: Thumbnail{Width: 400, PageWidth: 120},
 	}
 }
 
@@ -74,6 +75,9 @@ func (c *Config) validate() error {
 	}
 	if c.Thumbnail.Width <= 0 {
 		return errors.New("config: thumbnail.width must be > 0")
+	}
+	if c.Thumbnail.PageWidth <= 0 {
+		c.Thumbnail.PageWidth = 120
 	}
 	if _, err := c.ScanInterval(); err != nil {
 		return fmt.Errorf("config: scan.interval %q invalid: %w", c.Scan.Interval, err)
