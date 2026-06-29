@@ -206,3 +206,74 @@ func TestScanRenamesLibraryNode(t *testing.T) {
 }
 
 func itoa(i int64) string { return strconvFormat(i) }
+
+// writeTestZip builds a zip at path with one minimal PNG per filename in names.
+func writeTestZip(t *testing.T, path string, names []string) {
+	t.Helper()
+	pages := make(map[string][]byte, len(names))
+	for _, n := range names {
+		pages[n] = pngBytes(t)
+	}
+	writeZip(t, path, pages)
+}
+
+// pageCountOf finds the comic node whose path matches comicPath and returns its PageCount.
+func pageCountOf(t *testing.T, repo *store.NodeRepo, comicPath string) int {
+	t.Helper()
+	ctx := context.Background()
+	roots, err := repo.ListChildren(ctx, 0)
+	if err != nil {
+		t.Fatalf("pageCountOf: list roots: %v", err)
+	}
+	var search func(parentID int64) *store.Node
+	search = func(parentID int64) *store.Node {
+		kids, err := repo.ListChildren(ctx, parentID)
+		if err != nil {
+			return nil
+		}
+		for _, k := range kids {
+			if k.Path == comicPath {
+				return k
+			}
+			if k.Type == store.NodeDir {
+				if found := search(k.ID); found != nil {
+					return found
+				}
+			}
+		}
+		return nil
+	}
+	for _, r := range roots {
+		if n := search(r.ID); n != nil {
+			return int(n.PageCount)
+		}
+	}
+	t.Fatalf("pageCountOf: comic not found for path %s", comicPath)
+	return 0
+}
+
+func TestRescanReplacedArchiveUpdatesPageCount(t *testing.T) {
+	ctx := context.Background()
+	sc, repo, paths, _ := newTestScanner(t)
+	libDir := t.TempDir()
+	if _, err := paths.Add(ctx, "lib", libDir); err != nil {
+		t.Fatal(err)
+	}
+	comic := filepath.Join(libDir, "c.cbz")
+	writeTestZip(t, comic, []string{"01.png", "02.png"})
+	if err := sc.Scan(ctx); err != nil {
+		t.Fatal(err)
+	}
+	got := pageCountOf(t, repo, comic)
+	if got != 2 {
+		t.Fatalf("page count after first scan = %d, want 2", got)
+	}
+	// Replace the archive with a 3-page one (changes size/mtime so buildComic re-runs).
+	writeTestZip(t, comic, []string{"01.png", "02.png", "03.png"})
+	if err := sc.Scan(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got := pageCountOf(t, repo, comic); got != 3 {
+		t.Fatalf("page count after replace = %d, want 3", got)
+	}
+}

@@ -157,7 +157,9 @@ func (s *Scanner) scanDir(ctx context.Context, dir string, parentID int64) error
 
 func (s *Scanner) buildComic(ctx context.Context, node *store.Node, size, mtime int64) {
 	// Reset any stale extract cache so page count reflects current file.
-	os.RemoveAll(s.cacheDir(node.ID))
+	if err := os.RemoveAll(s.cacheDir(node.ID)); err != nil {
+		log.Printf("scanner: evict extract cache %d: %v", node.ID, err)
+	}
 
 	rc, _, count, err := archive.FirstImage(ctx, node.Path, s.cacheDir(node.ID))
 	if err != nil {
@@ -188,7 +190,9 @@ func (s *Scanner) writeThumb(id int64, rc interface{ Read([]byte) (int, error) }
 	return os.WriteFile(dst, data, 0o644)
 }
 
-type readerOnly struct{ r interface{ Read([]byte) (int, error) } }
+type readerOnly struct {
+	r interface{ Read([]byte) (int, error) }
+}
 
 func (r readerOnly) Read(p []byte) (int, error) { return r.r.Read(p) }
 
@@ -203,8 +207,12 @@ func (s *Scanner) removeNode(ctx context.Context, n *store.Node) {
 			s.removeNode(ctx, k)
 		}
 	}
-	os.Remove(s.thumbPath(n.ID))
-	os.RemoveAll(s.cacheDir(n.ID))
+	if err := os.Remove(s.thumbPath(n.ID)); err != nil && !os.IsNotExist(err) {
+		log.Printf("scanner: remove thumb %d: %v", n.ID, err)
+	}
+	if err := os.RemoveAll(s.cacheDir(n.ID)); err != nil {
+		log.Printf("scanner: remove extract cache %d: %v", n.ID, err)
+	}
 	if err := s.repo.Delete(ctx, n.ID); err != nil {
 		log.Printf("scanner: delete node %d: %v", n.ID, err)
 	}
