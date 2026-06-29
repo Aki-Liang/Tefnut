@@ -95,3 +95,26 @@ func TestDeleteRemovesNode(t *testing.T) {
 		t.Fatalf("expected gone, got %v", err)
 	}
 }
+
+func TestNodeDefaultDisplayMode(t *testing.T) {
+	ctx := context.Background()
+	r := NewNodeRepo(openTemp(t))
+	n := mkNode(t, r, 0, "c", "/lib/c.zip", NodeComic)
+	got, _ := r.Get(ctx, n.ID)
+	if got.DisplayMode != "single" {
+		t.Fatalf("default display_mode = %q, want single", got.DisplayMode)
+	}
+}
+
+func TestUpdateDisplayMode(t *testing.T) {
+	ctx := context.Background()
+	r := NewNodeRepo(openTemp(t))
+	n := mkNode(t, r, 0, "c", "/lib/c.zip", NodeComic)
+	if err := r.UpdateDisplayMode(ctx, n.ID, "spread"); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := r.Get(ctx, n.ID)
+	if got.DisplayMode != "spread" {
+		t.Fatalf("display_mode = %q, want spread", got.DisplayMode)
+	}
+}

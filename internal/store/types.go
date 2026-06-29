@@ -24,6 +24,7 @@ type Node struct {
 	Author      string
 	Rating           int
 	ReadingDirection string
+	DisplayMode      string
 	Size             int64
 	MTime       int64
 	CreatedAt   int64
