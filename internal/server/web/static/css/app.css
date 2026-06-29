@@ -250,13 +250,14 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
 #addtag button { background: var(--panel-2); color: var(--paper); border: 2px solid var(--line); border-radius: 6px; cursor: pointer; padding: 4px 10px; }
 
 /* the thumbnail strip is a contact sheet */
-.thumbstrip { position: relative; background: var(--ink); border-top: 2px solid var(--line); flex: 0 0 auto; }
-.strip-toggle {
-  position: absolute; top: -21px; left: 50%; transform: translateX(-50%);
-  background: var(--panel); color: var(--paper); border: 2px solid var(--line); border-bottom: 0;
-  border-radius: 6px 6px 0 0; width: 48px; height: 21px; cursor: pointer; font-size: 11px;
+.thumbstrip { background: var(--ink); flex: 0 0 auto; }
+.strip-toggle { /* a thin full-width handle: ••• in the middle, no overlap with the bar above */
+  display: block; width: 100%; height: 18px; padding: 0;
+  background: var(--panel); color: var(--muted);
+  border: 0; border-top: 2px solid var(--line); border-bottom: 1px solid var(--line);
+  cursor: pointer; font-size: 12px; line-height: 16px; letter-spacing: 4px; text-align: center;
 }
-.strip-toggle:hover { color: var(--seal); }
+.strip-toggle:hover { color: var(--seal); background: var(--panel-2); }
 .thumbs { display: flex; gap: 7px; overflow-x: auto; padding: 10px 12px; height: 104px; scrollbar-width: thin; }
 .thumbs.rtl { flex-direction: row-reverse; }
 .thumb { flex: 0 0 auto; cursor: pointer; border: 2px solid var(--line); border-radius: 3px; position: relative; transition: border-color 0.1s ease; }
@@ -268,7 +269,6 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
   width: 9px; height: 9px; background: var(--seal); border-radius: 0 2px 0 4px;
 }
 .thumbstrip.collapsed .thumbs { display: none; }
-.thumbstrip.collapsed { height: 8px; }
 
 /* ---- narrow screens ---- */
 @media (max-width: 640px) {

@@ -118,7 +118,7 @@ document.getElementById('dirtoggle').onclick = () => {
 let stripCollapsed = localStorage.getItem('stripCollapsed') === '1';
 function applyStripCollapsed() {
   stripEl.classList.toggle('collapsed', stripCollapsed);
-  document.getElementById('stripToggle').textContent = stripCollapsed ? '▲' : '▼';
+  document.getElementById('stripToggle').title = stripCollapsed ? '展开预览' : '收起预览';
 }
 document.getElementById('stripToggle').onclick = () => {
   stripCollapsed = !stripCollapsed;
