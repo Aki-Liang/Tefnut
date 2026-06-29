@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/fs"
 	"log"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -52,7 +53,7 @@ func (m *Manager) startWatchLocked(ctx context.Context) error {
 		return err
 	}
 	addTree := func(root string) {
-		filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
@@ -62,7 +63,9 @@ func (m *Manager) startWatchLocked(ctx context.Context) error {
 				}
 			}
 			return nil
-		})
+		}); err != nil {
+			log.Printf("scan: walk %s: %v", root, err)
+		}
 	}
 	for _, lib := range libs {
 		addTree(lib.Path)
@@ -86,7 +89,7 @@ func (m *Manager) startWatchLocked(ctx context.Context) error {
 				}
 				// newly created directories must be watched too
 				if ev.Op&fsnotify.Create == fsnotify.Create {
-					if info, statErr := filepath.Glob(ev.Name); statErr == nil && len(info) > 0 {
+					if fi, statErr := os.Stat(ev.Name); statErr == nil && fi.IsDir() {
 						addTree(ev.Name)
 					}
 				}
