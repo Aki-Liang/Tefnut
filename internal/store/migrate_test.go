@@ -1,44 +1,79 @@
 package store
 
 import (
-	"context"
+	"database/sql"
+	"path/filepath"
 	"testing"
+
+	_ "modernc.org/sqlite"
 )
 
-func TestEnsureColumnIdempotent(t *testing.T) {
-	db := openTemp(t)
-	// reading_direction already added by Open(); calling ensureColumn again must be a no-op (no error).
-	if err := ensureColumn(db.SQL(), "nodes", "reading_direction", "TEXT NOT NULL DEFAULT 'ltr'"); err != nil {
-		t.Fatalf("second ensureColumn: %v", err)
-	}
-	// a brand-new column should be added without error
-	if err := ensureColumn(db.SQL(), "nodes", "extra_col", "TEXT NOT NULL DEFAULT ''"); err != nil {
-		t.Fatalf("add extra_col: %v", err)
-	}
-	if err := ensureColumn(db.SQL(), "nodes", "extra_col", "TEXT NOT NULL DEFAULT ''"); err != nil {
-		t.Fatalf("re-add extra_col: %v", err)
-	}
-}
-
-func TestNodeDefaultReadingDirection(t *testing.T) {
-	ctx := context.Background()
-	r := NewNodeRepo(openTemp(t))
-	n := mkNode(t, r, 0, "c", "/lib/c.zip", NodeComic)
-	got, _ := r.Get(ctx, n.ID)
-	if got.ReadingDirection != "ltr" {
-		t.Fatalf("default direction = %q, want ltr", got.ReadingDirection)
-	}
-}
-
-func TestUpdateReadingDirection(t *testing.T) {
-	ctx := context.Background()
-	r := NewNodeRepo(openTemp(t))
-	n := mkNode(t, r, 0, "c", "/lib/c.zip", NodeComic)
-	if err := r.UpdateReadingDirection(ctx, n.ID, "rtl"); err != nil {
+func openRaw(t *testing.T) *sql.DB {
+	t.Helper()
+	db, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "m.db"))
+	if err != nil {
 		t.Fatal(err)
 	}
-	got, _ := r.Get(ctx, n.ID)
-	if got.ReadingDirection != "rtl" {
-		t.Fatalf("direction = %q, want rtl", got.ReadingDirection)
+	t.Cleanup(func() { db.Close() })
+	return db
+}
+
+func TestRunMigrationsFreshCreatesSchemaAndRecordsVersion(t *testing.T) {
+	db := openRaw(t)
+	if err := runMigrations(db); err != nil {
+		t.Fatal(err)
+	}
+	var v int
+	if err := db.QueryRow(`SELECT MAX(version) FROM schema_migrations`).Scan(&v); err != nil {
+		t.Fatal(err)
+	}
+	if v != latestVersion() {
+		t.Fatalf("version = %d, want %d", v, latestVersion())
+	}
+	// nodes table exists with the display_mode column.
+	if _, err := db.Exec(`INSERT INTO nodes (parent_id,name,path,type,created_at,updated_at) VALUES (0,'n','/p',1,0,0)`); err != nil {
+		t.Fatalf("insert into nodes: %v", err)
+	}
+	var mode string
+	if err := db.QueryRow(`SELECT display_mode FROM nodes WHERE path='/p'`).Scan(&mode); err != nil {
+		t.Fatalf("select display_mode: %v", err)
+	}
+	if mode != "single" {
+		t.Fatalf("display_mode default = %q, want single", mode)
+	}
+}
+
+func TestRunMigrationsIsIdempotent(t *testing.T) {
+	db := openRaw(t)
+	if err := runMigrations(db); err != nil {
+		t.Fatal(err)
+	}
+	if err := runMigrations(db); err != nil {
+		t.Fatalf("second run: %v", err)
+	}
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM schema_migrations`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != latestVersion() {
+		t.Fatalf("migration rows = %d, want %d", n, latestVersion())
+	}
+}
+
+func TestRunMigrationsBaselinesLegacyDB(t *testing.T) {
+	db := openRaw(t)
+	// Simulate a pre-migration database: tables already present, no schema_migrations.
+	if _, err := db.Exec(schemaV1); err != nil {
+		t.Fatal(err)
+	}
+	if err := runMigrations(db); err != nil {
+		t.Fatal(err)
+	}
+	var v int
+	if err := db.QueryRow(`SELECT MAX(version) FROM schema_migrations`).Scan(&v); err != nil {
+		t.Fatal(err)
+	}
+	if v != latestVersion() {
+		t.Fatalf("legacy baseline version = %d, want %d", v, latestVersion())
 	}
 }
