@@ -10,9 +10,9 @@ import (
 )
 
 type LibraryPath struct {
-	ID   int64
-	Name string
-	Path string
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	Path string `json:"path"`
 }
 
 type LibraryPathRepo struct {
