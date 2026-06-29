@@ -3,6 +3,7 @@ module Tefnut
 go 1.24
 
 require (
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/labstack/echo/v4 v4.7.2
 	github.com/mholt/archiver/v4 v4.0.0-alpha.7
 	github.com/robfig/cron/v3 v3.0.0

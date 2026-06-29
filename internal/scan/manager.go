@@ -139,7 +139,3 @@ func parseHHMM(v string) (hour, min int, err error) {
 	}
 	return hour, min, nil
 }
-
-func (m *Manager) startWatchLocked(ctx context.Context) error {
-	return fmt.Errorf("scan: watch mode not yet implemented")
-}
