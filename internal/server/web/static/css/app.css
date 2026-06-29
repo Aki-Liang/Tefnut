@@ -290,6 +290,6 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
 .spread { display: flex; gap: 2px; align-items: center; justify-content: center; height: 100%; width: 100%; }
 .spread img { max-height: 100%; max-width: 50%; object-fit: contain; box-shadow: 0 0 0 1px var(--line); }
 .continuous { height: 100%; width: 100%; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0; scrollbar-width: thin; }
-.continuous .cpage { width: min(100%, 760px); height: auto; display: block; box-shadow: 0 0 0 1px var(--line); }
+.continuous .cpage { width: min(100%, 760px); height: auto; min-height: 60vh; display: block; box-shadow: 0 0 0 1px var(--line); }
 #modetoggle { font-family: var(--font-mono); }
 #stepbtn { font-family: var(--font-mono); }

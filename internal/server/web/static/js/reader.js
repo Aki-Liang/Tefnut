@@ -99,12 +99,21 @@ function buildContinuous() {
     cont.appendChild(im);
   }
   contLazyObs = new IntersectionObserver((es) => {
-    es.forEach((e) => { if (e.isIntersecting) { const im = e.target; if (!im.src && im.dataset.src) im.src = im.dataset.src; } });
+    es.forEach((e) => { if (e.isIntersecting) { const im = e.target; if (!im.src && im.dataset.src) { im.src = im.dataset.src; contLazyObs.unobserve(im); } } });
   }, { root: cont, rootMargin: '300px' });
+  const visible = new Set();
   contPageObs = new IntersectionObserver((es) => {
     es.forEach((e) => {
-      if (e.isIntersecting) { cur = parseInt(e.target.dataset.page, 10); counter.textContent = `${cur + 1} / ${total}`; saveProgress(cur); updateStripActive(); }
+      const n = parseInt(e.target.dataset.page, 10);
+      if (e.isIntersecting) visible.add(n); else visible.delete(n);
     });
+    if (!visible.size) return;
+    const top = Math.min(...visible);
+    if (top === cur) return;
+    cur = top;
+    counter.textContent = `${cur + 1} / ${total}`;
+    saveProgress(cur);
+    updateStripActive();
   }, { root: cont, threshold: 0.5 });
   cont.querySelectorAll('.cpage').forEach((im) => { contLazyObs.observe(im); contPageObs.observe(im); });
 }
