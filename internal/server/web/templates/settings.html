@@ -1,0 +1,33 @@
+{{define "title"}}设置 · Tefnut{{end}}
+{{define "content"}}
+<h1>设置</h1>
+
+<section class="card-box">
+  <h2>漫画库路径</h2>
+  <ul id="paths">
+    {{range .LibraryPaths}}
+    <li data-id="{{.ID}}"><span class="lib-name">{{.Name}}</span><span class="lib-path">{{.Path}}</span><button class="del">删除</button></li>
+    {{end}}
+  </ul>
+  <form id="addpath" class="row">
+    <input id="np-path" placeholder="库目录绝对路径，如 /Users/me/comic">
+    <input id="np-name" placeholder="显示名（默认取末段）">
+    <button>添加</button>
+  </form>
+</section>
+
+<section class="card-box">
+  <h2>扫描方式</h2>
+  <form id="scanform">
+    <label><input type="radio" name="mode" value="interval"> 定时间隔</label>
+    <span class="mode-args" data-mode="interval"><input id="iv" placeholder="如 30m / 2h"></span>
+    <label><input type="radio" name="mode" value="daily"> 每日定时</label>
+    <span class="mode-args" data-mode="daily"><input id="daily" placeholder="HH:MM，如 03:00"></span>
+    <label><input type="radio" name="mode" value="watch"> 监控路径（文件变化即扫描）</label>
+    <div><button type="submit">保存</button></div>
+  </form>
+</section>
+
+<script id="scan-data" type="application/json">{"mode":"{{.ScanMode}}","interval":"{{.ScanInterval}}","daily":"{{.ScanDailyTime}}"}</script>
+{{end}}
+{{define "scripts"}}<script src="/static/js/settings.js"></script>{{end}}

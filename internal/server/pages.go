@@ -125,6 +125,22 @@ func (s *Server) breadcrumb(ctx context.Context, parent int64) []crumb {
 	return crumbs
 }
 
+func (s *Server) pageSettings(c echo.Context) error {
+	ctx := c.Request().Context()
+	scan, err := s.settings.GetScan(ctx)
+	if err != nil {
+		return fail(c, http.StatusInternalServerError, err)
+	}
+	paths, err := s.paths.List(ctx)
+	if err != nil {
+		return fail(c, http.StatusInternalServerError, err)
+	}
+	return render(c, "settings.html", map[string]any{
+		"LibraryPaths": paths, "ScanMode": scan.Mode,
+		"ScanInterval": scan.Interval, "ScanDailyTime": scan.DailyTime,
+	})
+}
+
 func (s *Server) pageReader(c echo.Context) error {
 	ctx := c.Request().Context()
 	id, err := parseID(c, "id")

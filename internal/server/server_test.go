@@ -356,3 +356,12 @@ func TestApiAddPathRejectsMissingDir(t *testing.T) {
 		t.Fatalf("expected 400, got %d", rec.Code)
 	}
 }
+
+func TestPageSettingsRenders(t *testing.T) {
+	_, e, _ := newTestServer(t)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/settings", nil))
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "扫描方式") {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
