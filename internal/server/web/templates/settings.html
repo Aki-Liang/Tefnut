@@ -18,12 +18,24 @@
 
 <section class="card-box">
   <h2>扫描方式</h2>
-  <form id="scanform">
-    <label><input type="radio" name="mode" value="interval"> 定时间隔</label>
-    <span class="mode-args" data-mode="interval"><input id="iv" placeholder="如 30m / 2h"></span>
-    <label><input type="radio" name="mode" value="daily"> 每日定时</label>
-    <span class="mode-args" data-mode="daily"><input id="daily" placeholder="HH:MM，如 03:00"></span>
-    <label><input type="radio" name="mode" value="watch"> 监控路径（文件变化即扫描）</label>
+  <form id="scanform" class="scanform">
+    <div class="mode-row">
+      <label><input type="radio" name="mode" value="interval"> 定时间隔</label>
+      <span class="mode-args" data-mode="interval">
+        <input id="iv" placeholder="如 30m">
+        <small class="hint">格式：如 30m、2h、90m；单位 s/m/h</small>
+      </span>
+    </div>
+    <div class="mode-row">
+      <label><input type="radio" name="mode" value="daily"> 每日定时</label>
+      <span class="mode-args" data-mode="daily">
+        <select id="daily-h"></select> 时
+        <select id="daily-m"></select> 分
+      </span>
+    </div>
+    <div class="mode-row">
+      <label><input type="radio" name="mode" value="watch"> 监控路径（文件变化即扫描）</label>
+    </div>
     <div><button type="submit">保存</button></div>
   </form>
 </section>

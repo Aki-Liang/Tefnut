@@ -4,7 +4,22 @@ const initial = { mode: sd.mode || 'interval', interval: sd.interval || '', dail
 // reflect current scan settings into the form (iterate radios; no string-interpolated selector)
 document.querySelectorAll('input[name="mode"]').forEach(r => { r.checked = (r.value === initial.mode); });
 document.getElementById('iv').value = initial.interval;
-document.getElementById('daily').value = initial.daily;
+
+// populate hour (00-23) and minute (00-59) selects
+function fill(sel, max, value) {
+  for (var i = 0; i <= max; i++) {
+    var v = String(i).padStart(2, '0');
+    var opt = document.createElement('option');
+    opt.value = v; opt.textContent = v;
+    sel.appendChild(opt);
+  }
+  sel.value = value;
+}
+var dh = document.getElementById('daily-h');
+var dm = document.getElementById('daily-m');
+var parts = (initial.daily || '03:00').split(':');
+fill(dh, 23, String(parts[0] || '03').padStart(2, '0'));
+fill(dm, 59, String(parts[1] || '00').padStart(2, '0'));
 
 function syncModeArgs() {
   const mode = document.querySelector('input[name="mode"]:checked').value;
@@ -54,7 +69,7 @@ document.getElementById('scanform').addEventListener('submit', (e) => {
   const payload = {
     scanMode: mode,
     scanInterval: document.getElementById('iv').value.trim(),
-    scanDailyTime: document.getElementById('daily').value.trim()
+    scanDailyTime: document.getElementById('daily-h').value + ':' + document.getElementById('daily-m').value
   };
   fetch('/api/settings', {
     method: 'PUT', headers: { 'Content-Type': 'application/json' },

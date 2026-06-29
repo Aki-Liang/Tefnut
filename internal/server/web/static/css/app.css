@@ -45,9 +45,16 @@ main.reader-main { margin-left: 0; padding: 0; }
 #paths li { display: flex; gap: 10px; align-items: center; padding: 6px 0; }
 #paths .lib-name { font-weight: 600; min-width: 90px; }
 #paths .lib-path { color: #9aa3b2; flex: 1; word-break: break-all; }
-#addpath.row, #scanform { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+#addpath.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 #scanform label { color: #ddd; }
 .card-box input, .card-box button { background: #222; color: #eee; border: 1px solid #333; border-radius: 6px; padding: 6px 10px; }
+
+/* scan mode form vertical layout */
+.scanform { display: flex; flex-direction: column; gap: 12px; align-items: flex-start; }
+.scanform .mode-row { display: flex; flex-direction: column; gap: 4px; }
+.scanform .mode-args { display: flex; align-items: center; gap: 6px; margin-left: 22px; }
+.scanform .hint { color: #8a93a2; font-size: 12px; }
+.scanform select { background: #222; color: #eee; border: 1px solid #333; border-radius: 6px; padding: 4px 8px; }
 
 /* collapsible sidebar */
 .sidebar-toggle { position: fixed; top: 10px; left: 10px; z-index: 30; background: #2a2f3a; color: #eee; border: 1px solid #3a4150; border-radius: 6px; width: 34px; height: 34px; font-size: 16px; cursor: pointer; }

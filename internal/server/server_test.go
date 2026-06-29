@@ -475,6 +475,16 @@ func TestSidebarHasToggle(t *testing.T) {
 	}
 }
 
+func TestSettingsHasHourMinuteSelects(t *testing.T) {
+	_, e, _ := newTestServer(t)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/settings", nil))
+	body := rec.Body.String()
+	if !strings.Contains(body, `id="daily-h"`) || !strings.Contains(body, `id="daily-m"`) {
+		t.Fatalf("settings should have hour/minute selects: %s", body)
+	}
+}
+
 func TestSidebarOnBrowseNotReader(t *testing.T) {
 	s, e, db := newTestServer(t)
 	n := seedComic(t, db, s.dataDir)
