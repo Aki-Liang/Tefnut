@@ -2,12 +2,8 @@
 {{define "sidebar"}}{{- "" -}}{{end}}
 {{define "mainclass"}}reader-main{{end}}
 {{define "content"}}
-<div id="reader" data-id="{{.ID}}" data-pages="{{.PageCount}}" data-start="{{.LastPage}}" data-dir="{{.ReadingDirection}}">
-  <div class="reader-stage">
-    <button class="nav prev" id="prev" aria-label="上一页">‹</button>
-    <img id="page" alt="page">
-    <button class="nav next" id="next" aria-label="下一页">›</button>
-  </div>
+<div id="reader" data-id="{{.ID}}" data-pages="{{.PageCount}}" data-start="{{.LastPage}}" data-dir="{{.ReadingDirection}}" data-mode="{{.DisplayMode}}">
+  <div class="reader-stage"></div>
   <div class="reader-bar">
     <a class="back" href="/">← 返回</a>
     <button class="pagebtn" id="prevbtn">上一页</button>
@@ -20,6 +16,12 @@
     <div class="tags" id="tags"></div>
     <form id="addtag"><input id="newtag" placeholder="添加标签"><button>+</button></form>
     <button class="pagebtn" id="dirtoggle" title="翻页方向">方向: <span id="dirlabel">LTR</span></button>
+      <select class="pagebtn" id="modetoggle" title="展示方式">
+        <option value="single">单页</option>
+        <option value="continuous">连续</option>
+        <option value="spread">双页</option>
+      </select>
+      <button class="pagebtn" id="stepbtn" title="翻页步进">步进: <span id="steplabel">两页</span></button>
   </div>
   <div id="thumbstrip" class="thumbstrip">
     <button id="stripToggle" class="strip-toggle" aria-label="收起/展开预览">•••</button>

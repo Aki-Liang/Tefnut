@@ -561,6 +561,20 @@ func TestApiUpdateMetaRejectsBadDisplayMode(t *testing.T) {
 	}
 }
 
+func TestReaderHasModeToggle(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/read/"+itoa(n.ID), nil))
+	body := rec.Body.String()
+	if !strings.Contains(body, `id="modetoggle"`) {
+		t.Fatalf("reader should have mode toggle: %s", body)
+	}
+	if !strings.Contains(body, `data-mode="single"`) {
+		t.Fatal("reader should carry data-mode")
+	}
+}
+
 func TestSidebarOnBrowseNotReader(t *testing.T) {
 	s, e, db := newTestServer(t)
 	n := seedComic(t, db, s.dataDir)

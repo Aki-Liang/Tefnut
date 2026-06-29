@@ -44,6 +44,7 @@ type readerData struct {
 	LastPage         int
 	Ratings          []int
 	ReadingDirection string
+	DisplayMode      string
 }
 
 // render clones the base layout template set, parses the given page template
@@ -157,6 +158,10 @@ func (s *Server) pageReader(c echo.Context) error {
 	if dir == "" {
 		dir = "ltr"
 	}
+	displayMode := n.DisplayMode
+	if displayMode == "" {
+		displayMode = "single"
+	}
 	return render(c, "reader.html", readerData{
 		ID:               n.ID,
 		Name:             n.Name,
@@ -166,5 +171,6 @@ func (s *Server) pageReader(c echo.Context) error {
 		LastPage:         last,
 		Ratings:          ratingChoices,
 		ReadingDirection: dir,
+		DisplayMode:      displayMode,
 	})
 }
