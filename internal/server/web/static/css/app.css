@@ -12,15 +12,15 @@
 }
 
 :root {
-  --ink:     #14110d;   /* page background, warm near-black */
-  --ink-2:   #0d0b08;   /* reader theater, deeper */
-  --panel:   #1e1a13;   /* card / panel surface */
-  --panel-2: #271f16;   /* raised / hover */
-  --line:    #3a3124;   /* gutters & frames */
-  --paper:   #f2ecdd;   /* primary text / "paper" */
-  --muted:   #a99e86;   /* secondary text */
-  --seal:    #e2483d;   /* cinnabar accent — used with restraint */
-  --seal-dim:#b8392f;
+  --ink:     #0f1318;   /* page background, cool blue-charcoal */
+  --ink-2:   #0a0d11;   /* reader theater, deeper */
+  --panel:   #161c24;   /* card / panel surface */
+  --panel-2: #1f2731;   /* raised / hover */
+  --line:    #2a3543;   /* gutters & frames */
+  --paper:   #e6edf3;   /* primary text, cool white */
+  --muted:   #8593a4;   /* secondary text */
+  --seal:    #38bdf8;   /* cool accent — azure, used with restraint */
+  --seal-dim:#2a93c9;
 
   --font-display: 'Anton', 'PingFang SC', 'Hiragino Sans GB', system-ui, sans-serif;
   --font-body: system-ui, -apple-system, 'PingFang SC', 'Hiragino Sans GB', 'Noto Sans CJK SC', sans-serif;
