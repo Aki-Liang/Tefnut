@@ -26,10 +26,11 @@ CREATE TABLE IF NOT EXISTS nodes (
   cover_status INTEGER NOT NULL DEFAULT 0,
   author       TEXT    NOT NULL DEFAULT '',
   rating       INTEGER NOT NULL DEFAULT 0,
-  size         INTEGER NOT NULL DEFAULT 0,
-  mtime        INTEGER NOT NULL DEFAULT 0,
-  created_at   INTEGER NOT NULL,
-  updated_at   INTEGER NOT NULL
+  size              INTEGER NOT NULL DEFAULT 0,
+  mtime             INTEGER NOT NULL DEFAULT 0,
+  created_at        INTEGER NOT NULL,
+  updated_at        INTEGER NOT NULL,
+  reading_direction TEXT    NOT NULL DEFAULT 'ltr'
 );
 CREATE INDEX IF NOT EXISTS idx_nodes_parent ON nodes(parent_id);
 
@@ -78,6 +79,10 @@ func Open(dsn string) (*DB, error) {
 	if _, err := sqldb.Exec(schema); err != nil {
 		sqldb.Close()
 		return nil, fmt.Errorf("store: migrate: %w", err)
+	}
+	if err := ensureColumn(sqldb, "nodes", "reading_direction", "TEXT NOT NULL DEFAULT 'ltr'"); err != nil {
+		sqldb.Close()
+		return nil, err
 	}
 	return &DB{db: sqldb}, nil
 }

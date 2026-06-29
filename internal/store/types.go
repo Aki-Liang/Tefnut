@@ -22,8 +22,9 @@ type Node struct {
 	PageCount   int
 	CoverStatus int
 	Author      string
-	Rating      int
-	Size        int64
+	Rating           int
+	ReadingDirection string
+	Size             int64
 	MTime       int64
 	CreatedAt   int64
 	UpdatedAt   int64

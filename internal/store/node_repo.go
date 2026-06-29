@@ -18,12 +18,12 @@ type NodeRepo struct {
 func NewNodeRepo(db *DB) *NodeRepo { return &NodeRepo{db: db.SQL()} }
 
 const nodeCols = `id, parent_id, name, path, type, page_count, cover_status,
-	author, rating, size, mtime, created_at, updated_at`
+	author, rating, size, mtime, created_at, updated_at, reading_direction`
 
 func scanNode(s interface{ Scan(...any) error }) (*Node, error) {
 	n := &Node{}
 	err := s.Scan(&n.ID, &n.ParentID, &n.Name, &n.Path, &n.Type, &n.PageCount,
-		&n.CoverStatus, &n.Author, &n.Rating, &n.Size, &n.MTime, &n.CreatedAt, &n.UpdatedAt)
+		&n.CoverStatus, &n.Author, &n.Rating, &n.Size, &n.MTime, &n.CreatedAt, &n.UpdatedAt, &n.ReadingDirection)
 	if err != nil {
 		return nil, err
 	}
@@ -77,7 +77,7 @@ func (r *NodeRepo) Search(ctx context.Context, q string, tagID int64, minRating 
 	args := []any{}
 	sb.WriteString(`SELECT `)
 	sb.WriteString(`n.id, n.parent_id, n.name, n.path, n.type, n.page_count, n.cover_status,
-		n.author, n.rating, n.size, n.mtime, n.created_at, n.updated_at FROM nodes n`)
+		n.author, n.rating, n.size, n.mtime, n.created_at, n.updated_at, n.reading_direction FROM nodes n`)
 	if tagID > 0 {
 		sb.WriteString(` JOIN node_tags nt ON nt.node_id = n.id AND nt.tag_id = ?`)
 		args = append(args, tagID)
@@ -145,6 +145,15 @@ func (r *NodeRepo) Delete(ctx context.Context, id int64) error {
 		}
 	}
 	return tx.Commit()
+}
+
+func (r *NodeRepo) UpdateReadingDirection(ctx context.Context, id int64, dir string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE nodes SET reading_direction=?, updated_at=? WHERE id=?`, dir, time.Now().Unix(), id)
+	if err != nil {
+		return fmt.Errorf("store: update reading_direction %d: %w", id, err)
+	}
+	return nil
 }
 
 func collectNodes(rows *sql.Rows) ([]*Node, error) {
