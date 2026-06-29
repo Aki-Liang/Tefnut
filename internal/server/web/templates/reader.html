@@ -2,7 +2,7 @@
 {{define "sidebar"}}{{- "" -}}{{end}}
 {{define "mainclass"}}reader-main{{end}}
 {{define "content"}}
-<div id="reader" data-id="{{.ID}}" data-pages="{{.PageCount}}" data-start="{{.LastPage}}">
+<div id="reader" data-id="{{.ID}}" data-pages="{{.PageCount}}" data-start="{{.LastPage}}" data-dir="{{.ReadingDirection}}">
   <div class="reader-stage">
     <button class="nav prev" id="prev" aria-label="上一页">‹</button>
     <img id="page" alt="page">
@@ -19,6 +19,11 @@
     </div>
     <div class="tags" id="tags"></div>
     <form id="addtag"><input id="newtag" placeholder="添加标签"><button>+</button></form>
+    <button class="pagebtn" id="dirtoggle" title="翻页方向">方向: <span id="dirlabel">LTR</span></button>
+  </div>
+  <div id="thumbstrip" class="thumbstrip">
+    <button id="stripToggle" class="strip-toggle" aria-label="收起/展开预览">▼</button>
+    <div class="thumbs" id="thumbs"></div>
   </div>
 </div>
 {{end}}

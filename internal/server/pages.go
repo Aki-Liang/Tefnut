@@ -36,13 +36,14 @@ type browseData struct {
 }
 
 type readerData struct {
-	ID        int64
-	Name      string
-	Author    string
-	Rating    int
-	PageCount int
-	LastPage  int
-	Ratings   []int
+	ID               int64
+	Name             string
+	Author           string
+	Rating           int
+	PageCount        int
+	LastPage         int
+	Ratings          []int
+	ReadingDirection string
 }
 
 // render clones the base layout template set, parses the given page template
@@ -152,13 +153,18 @@ func (s *Server) pageReader(c echo.Context) error {
 		return fail(c, http.StatusNotFound, err)
 	}
 	last, _ := s.progress.Get(ctx, id)
+	dir := n.ReadingDirection
+	if dir == "" {
+		dir = "ltr"
+	}
 	return render(c, "reader.html", readerData{
-		ID:        n.ID,
-		Name:      n.Name,
-		Author:    n.Author,
-		Rating:    n.Rating,
-		PageCount: n.PageCount,
-		LastPage:  last,
-		Ratings:   ratingChoices,
+		ID:               n.ID,
+		Name:             n.Name,
+		Author:           n.Author,
+		Rating:           n.Rating,
+		PageCount:        n.PageCount,
+		LastPage:         last,
+		Ratings:          ratingChoices,
+		ReadingDirection: dir,
 	})
 }

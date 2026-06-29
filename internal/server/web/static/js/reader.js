@@ -5,6 +5,8 @@ let cur = Math.min(parseInt(el.dataset.start, 10) || 0, Math.max(total - 1, 0));
 const img = document.getElementById('page');
 const counter = document.getElementById('counter');
 
+let dir = el.dataset.dir || 'ltr';
+
 function pageURL(n) { return `/api/comics/${id}/pages/${n}`; }
 
 function preload(n) {
@@ -29,16 +31,103 @@ function show(n) {
   counter.textContent = `${cur + 1} / ${total}`;
   preload(cur + 1);
   saveProgress(cur);
+  updateStripActive();
 }
 
-document.getElementById('next').onclick = () => show(cur + 1);
-document.getElementById('prev').onclick = () => show(cur - 1);
-document.getElementById('nextbtn').onclick = () => show(cur + 1);
-document.getElementById('prevbtn').onclick = () => show(cur - 1);
+function advance() { show(cur + 1); }
+function back() { show(cur - 1); }
+
+function bindControls() {
+  // bottom bar buttons are LOGICAL (上一页 = back, 下一页 = advance) regardless of direction
+  document.getElementById('nextbtn').onclick = advance;
+  document.getElementById('prevbtn').onclick = back;
+  // side click zones are PHYSICAL and flip with direction
+  if (dir === 'rtl') {
+    document.getElementById('prev').onclick = advance; // left zone advances
+    document.getElementById('next').onclick = back;    // right zone goes back
+  } else {
+    document.getElementById('prev').onclick = back;
+    document.getElementById('next').onclick = advance;
+  }
+}
+bindControls();
+
 document.addEventListener('keydown', (e) => {
-  if (e.key === 'ArrowRight') show(cur + 1);
-  if (e.key === 'ArrowLeft') show(cur - 1);
+  if (e.key === 'ArrowRight') { dir === 'rtl' ? back() : advance(); }
+  if (e.key === 'ArrowLeft')  { dir === 'rtl' ? advance() : back(); }
 });
+
+// --- thumbnail strip ---
+const thumbsEl = document.getElementById('thumbs');
+const stripEl = document.getElementById('thumbstrip');
+
+const thumbObserver = new IntersectionObserver((entries) => {
+  entries.forEach((entry) => {
+    if (entry.isIntersecting) {
+      const img = entry.target;
+      if (!img.src && img.dataset.src) img.src = img.dataset.src;
+      thumbObserver.unobserve(img);
+    }
+  });
+}, { root: stripEl });
+
+function buildStrip() {
+  thumbsEl.innerHTML = '';
+  thumbsEl.classList.toggle('rtl', dir === 'rtl');
+  for (let i = 0; i < total; i++) {
+    const fig = document.createElement('div');
+    fig.className = 'thumb';
+    fig.dataset.page = i;
+    const timg = document.createElement('img');
+    timg.dataset.src = `/api/comics/${id}/pages/${i}/thumb`;
+    timg.alt = `第 ${i + 1} 页`;
+    fig.appendChild(timg);
+    fig.onclick = () => show(i);
+    thumbsEl.appendChild(fig);
+    thumbObserver.observe(timg);
+  }
+}
+
+function updateStripActive() {
+  const figs = thumbsEl.children;
+  for (let i = 0; i < figs.length; i++) figs[i].classList.toggle('active', i === cur);
+  const active = figs[cur];
+  if (active) active.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+}
+
+// --- direction toggle ---
+function applyDirLabel() { document.getElementById('dirlabel').textContent = dir.toUpperCase(); }
+
+document.getElementById('dirtoggle').onclick = () => {
+  const next = dir === 'ltr' ? 'rtl' : 'ltr';
+  fetch(`/api/comics/${id}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ readingDirection: next })
+  }).then(r => {
+    if (!r.ok) { alert('切换方向失败'); return; }
+    dir = next;
+    applyDirLabel();
+    bindControls();
+    buildStrip();
+    updateStripActive();
+  }).catch(() => alert('切换方向失败'));
+};
+
+// --- strip collapse ---
+let stripCollapsed = localStorage.getItem('stripCollapsed') === '1';
+function applyStripCollapsed() {
+  stripEl.classList.toggle('collapsed', stripCollapsed);
+  document.getElementById('stripToggle').textContent = stripCollapsed ? '▲' : '▼';
+}
+document.getElementById('stripToggle').onclick = () => {
+  stripCollapsed = !stripCollapsed;
+  localStorage.setItem('stripCollapsed', stripCollapsed ? '1' : '0');
+  applyStripCollapsed();
+};
+
+applyDirLabel();
+applyStripCollapsed();
+buildStrip();
 
 if (total > 0) show(cur); else counter.textContent = '无可显示页面';
 
