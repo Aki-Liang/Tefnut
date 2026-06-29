@@ -8,6 +8,7 @@
 </head>
 <body>
 {{block "sidebar" .}}
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="切换侧栏">☰</button>
 <aside class="sidebar">
   <div class="brand">Tefnut</div>
   <nav>
@@ -25,6 +26,7 @@
     });
   })();
 </script>
+<script src="/static/js/sidebar.js"></script>
 {{end}}
 <main class="{{block "mainclass" .}}with-sidebar{{end}}">{{block "content" .}}{{end}}</main>
 {{block "scripts" .}}{{end}}

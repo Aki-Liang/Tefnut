@@ -459,6 +459,22 @@ func TestApiUpdateMetaRejectsBadDirection(t *testing.T) {
 	}
 }
 
+func TestSidebarHasToggle(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	brec := httptest.NewRecorder()
+	e.ServeHTTP(brec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if !strings.Contains(brec.Body.String(), `id="sidebar-toggle"`) {
+		t.Fatalf("browse should have sidebar toggle: %s", brec.Body.String())
+	}
+	// reader (full-screen, sidebar blanked) must NOT have the toggle
+	rrec := httptest.NewRecorder()
+	e.ServeHTTP(rrec, httptest.NewRequest(http.MethodGet, "/read/"+itoa(n.ID), nil))
+	if strings.Contains(rrec.Body.String(), `id="sidebar-toggle"`) {
+		t.Fatal("reader should not have sidebar toggle")
+	}
+}
+
 func TestSidebarOnBrowseNotReader(t *testing.T) {
 	s, e, db := newTestServer(t)
 	n := seedComic(t, db, s.dataDir)

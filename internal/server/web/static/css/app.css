@@ -48,3 +48,11 @@ main.reader-main { margin-left: 0; padding: 0; }
 #addpath.row, #scanform { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 #scanform label { color: #ddd; }
 .card-box input, .card-box button { background: #222; color: #eee; border: 1px solid #333; border-radius: 6px; padding: 6px 10px; }
+
+/* collapsible sidebar */
+.sidebar-toggle { position: fixed; top: 10px; left: 10px; z-index: 30; background: #2a2f3a; color: #eee; border: 1px solid #3a4150; border-radius: 6px; width: 34px; height: 34px; font-size: 16px; cursor: pointer; }
+.sidebar { transition: transform 0.2s ease; }
+.sidebar .brand { padding-left: 40px; }
+main.with-sidebar { transition: margin-left 0.2s ease; }
+.sidebar-collapsed .sidebar { transform: translateX(-100%); }
+.sidebar-collapsed main.with-sidebar { margin-left: 0; }
