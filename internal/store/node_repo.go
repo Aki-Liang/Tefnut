@@ -114,12 +114,42 @@ func (r *NodeRepo) UpdateName(ctx context.Context, id int64, name string) error 
 	return nil
 }
 
-func (r *NodeRepo) UpdateMeta(ctx context.Context, id int64, author string, rating int) error {
-	_, err := r.db.ExecContext(ctx,
-		`UPDATE nodes SET author=?, rating=?, updated_at=? WHERE id=?`,
-		author, rating, time.Now().Unix(), id)
-	if err != nil {
-		return fmt.Errorf("store: update meta %d: %w", id, err)
+type NodePatch struct {
+	Author           *string
+	Rating           *int
+	ReadingDirection *string
+	DisplayMode      *string
+}
+
+// UpdateFields applies only the set fields of p to node id in one statement.
+// An empty patch is a no-op.
+func (r *NodeRepo) UpdateFields(ctx context.Context, id int64, p NodePatch) error {
+	sets := []string{}
+	args := []any{}
+	if p.Author != nil {
+		sets = append(sets, "author=?")
+		args = append(args, *p.Author)
+	}
+	if p.Rating != nil {
+		sets = append(sets, "rating=?")
+		args = append(args, *p.Rating)
+	}
+	if p.ReadingDirection != nil {
+		sets = append(sets, "reading_direction=?")
+		args = append(args, *p.ReadingDirection)
+	}
+	if p.DisplayMode != nil {
+		sets = append(sets, "display_mode=?")
+		args = append(args, *p.DisplayMode)
+	}
+	if len(sets) == 0 {
+		return nil
+	}
+	sets = append(sets, "updated_at=?")
+	args = append(args, time.Now().Unix(), id)
+	q := `UPDATE nodes SET ` + strings.Join(sets, ", ") + ` WHERE id=?`
+	if _, err := r.db.ExecContext(ctx, q, args...); err != nil {
+		return fmt.Errorf("store: update fields %d: %w", id, err)
 	}
 	return nil
 }
@@ -140,24 +170,6 @@ func (r *NodeRepo) Delete(ctx context.Context, id int64) error {
 		}
 	}
 	return tx.Commit()
-}
-
-func (r *NodeRepo) UpdateReadingDirection(ctx context.Context, id int64, dir string) error {
-	_, err := r.db.ExecContext(ctx,
-		`UPDATE nodes SET reading_direction=?, updated_at=? WHERE id=?`, dir, time.Now().Unix(), id)
-	if err != nil {
-		return fmt.Errorf("store: update reading_direction %d: %w", id, err)
-	}
-	return nil
-}
-
-func (r *NodeRepo) UpdateDisplayMode(ctx context.Context, id int64, mode string) error {
-	_, err := r.db.ExecContext(ctx,
-		`UPDATE nodes SET display_mode=?, updated_at=? WHERE id=?`, mode, time.Now().Unix(), id)
-	if err != nil {
-		return fmt.Errorf("store: update display_mode %d: %w", id, err)
-	}
-	return nil
 }
 
 func collectNodes(rows *sql.Rows) ([]*Node, error) {

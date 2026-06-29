@@ -38,6 +38,12 @@ func (s *Server) apiUpdateMeta(c echo.Context) error {
 			return fail(c, http.StatusBadRequest, errors.New("readingDirection must be ltr or rtl"))
 		}
 	}
+	if body.DisplayMode != nil {
+		m := *body.DisplayMode
+		if m != "single" && m != "continuous" && m != "spread" {
+			return fail(c, http.StatusBadRequest, errors.New("displayMode must be single, continuous, or spread"))
+		}
+	}
 	n, err := s.nodes.Get(ctx, id)
 	if errors.Is(err, store.ErrNotFound) {
 		return fail(c, http.StatusNotFound, err)
@@ -45,34 +51,21 @@ func (s *Server) apiUpdateMeta(c echo.Context) error {
 	if err != nil {
 		return fail(c, http.StatusInternalServerError, err)
 	}
-	author := n.Author
-	rating := n.Rating
+	patch := store.NodePatch{
+		Author:           body.Author,
+		Rating:           body.Rating,
+		ReadingDirection: body.ReadingDirection,
+		DisplayMode:      body.DisplayMode,
+	}
+	if err := s.nodes.UpdateFields(ctx, id, patch); err != nil {
+		return fail(c, http.StatusInternalServerError, err)
+	}
+	author, rating := n.Author, n.Rating
 	if body.Author != nil {
 		author = *body.Author
 	}
 	if body.Rating != nil {
 		rating = *body.Rating
-	}
-	if err := s.nodes.UpdateMeta(ctx, id, author, rating); err != nil {
-		return fail(c, http.StatusInternalServerError, err)
-	}
-	// Note: author/rating (UpdateMeta) and readingDirection are separate writes,
-	// not one transaction. A partial failure between them leaves a split state
-	// (a 500 is surfaced). Extremely low probability on a local single-row SQLite
-	// update; acceptable for this home app.
-	if body.ReadingDirection != nil {
-		if err := s.nodes.UpdateReadingDirection(ctx, id, *body.ReadingDirection); err != nil {
-			return fail(c, http.StatusInternalServerError, err)
-		}
-	}
-	if body.DisplayMode != nil {
-		m := *body.DisplayMode
-		if m != "single" && m != "continuous" && m != "spread" {
-			return fail(c, http.StatusBadRequest, errors.New("displayMode must be single, continuous, or spread"))
-		}
-		if err := s.nodes.UpdateDisplayMode(ctx, id, m); err != nil {
-			return fail(c, http.StatusInternalServerError, err)
-		}
 	}
 	return ok(c, map[string]any{"author": author, "rating": rating})
 }

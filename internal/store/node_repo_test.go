@@ -58,7 +58,9 @@ func TestSearchByNameAndRating(t *testing.T) {
 	r := NewNodeRepo(openTemp(t))
 	a := mkNode(t, r, 0, "Naruto Vol1", "/lib/n1.zip", NodeComic)
 	mkNode(t, r, 0, "Bleach Vol1", "/lib/b1.zip", NodeComic)
-	if err := r.UpdateMeta(ctx, a.ID, "Kishimoto", 5); err != nil {
+	kishimoto := "Kishimoto"
+	five := 5
+	if err := r.UpdateFields(ctx, a.ID, NodePatch{Author: &kishimoto, Rating: &five}); err != nil {
 		t.Fatal(err)
 	}
 	res, err := r.Search(ctx, "naruto", 0, 0)
@@ -110,7 +112,8 @@ func TestUpdateDisplayMode(t *testing.T) {
 	ctx := context.Background()
 	r := NewNodeRepo(openTemp(t))
 	n := mkNode(t, r, 0, "c", "/lib/c.zip", NodeComic)
-	if err := r.UpdateDisplayMode(ctx, n.ID, "spread"); err != nil {
+	spread := "spread"
+	if err := r.UpdateFields(ctx, n.ID, NodePatch{DisplayMode: &spread}); err != nil {
 		t.Fatal(err)
 	}
 	got, _ := r.Get(ctx, n.ID)
@@ -123,6 +126,40 @@ func TestNodeScanTargetsMatchColumnNames(t *testing.T) {
 	n := &Node{}
 	if got := len(nodeScanTargets(n)); got != len(nodeColNames) {
 		t.Fatalf("scan targets = %d, column names = %d", got, len(nodeColNames))
+	}
+}
+
+func TestUpdateFieldsPartialAndAtomic(t *testing.T) {
+	repo := NewNodeRepo(openTemp(t))
+	ctx := context.Background()
+	n, err := repo.Create(ctx, &Node{Name: "C", Path: "/c.cbz", Type: NodeComic})
+	if err != nil {
+		t.Fatal(err)
+	}
+	author := "Author"
+	rating := 5
+	if err := repo.UpdateFields(ctx, n.ID, NodePatch{Author: &author, Rating: &rating}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ := repo.Get(ctx, n.ID)
+	if got.Author != "Author" || got.Rating != 5 {
+		t.Fatalf("after author/rating patch: %+v", got)
+	}
+	if got.DisplayMode != "single" || got.ReadingDirection != "ltr" {
+		t.Fatalf("unrelated fields changed: %+v", got)
+	}
+	mode := "spread"
+	dir := "rtl"
+	if err := repo.UpdateFields(ctx, n.ID, NodePatch{DisplayMode: &mode, ReadingDirection: &dir}); err != nil {
+		t.Fatal(err)
+	}
+	got, _ = repo.Get(ctx, n.ID)
+	if got.DisplayMode != "spread" || got.ReadingDirection != "rtl" || got.Author != "Author" {
+		t.Fatalf("after mode/dir patch: %+v", got)
+	}
+	// No-op patch is allowed and changes nothing.
+	if err := repo.UpdateFields(ctx, n.ID, NodePatch{}); err != nil {
+		t.Fatalf("empty patch: %v", err)
 	}
 }
 
