@@ -28,7 +28,6 @@ type Manager struct {
 	cron     *cron.Cron
 	stopMode func() // tears down the current mode (cron stop / watcher close)
 	debounce time.Duration
-	baseCtx  context.Context
 }
 
 func New(sc Scanner, settings *store.SettingsRepo, paths *store.LibraryPathRepo) *Manager {
@@ -37,7 +36,6 @@ func New(sc Scanner, settings *store.SettingsRepo, paths *store.LibraryPathRepo)
 
 // Start runs one blocking scan, then starts the active mode.
 func (m *Manager) Start(ctx context.Context) error {
-	m.baseCtx = ctx
 	if err := m.scanner.Scan(ctx); err != nil {
 		log.Printf("scan: initial scan: %v", err)
 	}
@@ -100,7 +98,7 @@ func (m *Manager) applyMode(ctx context.Context) error {
 		}
 		c.Start()
 		m.cron = c
-		m.stopMode = func() { c.Stop() }
+		m.stopMode = func() { <-c.Stop().Done() }
 		return nil
 	default:
 		return fmt.Errorf("scan: unknown mode %q", settings.Mode)
