@@ -109,8 +109,15 @@ func (s *Server) apiCover(c echo.Context) error {
 		return fail(c, http.StatusBadRequest, err)
 	}
 	p := filepath.Join(s.dataDir, "thumbs", strconv.FormatInt(id, 10)+".jpg")
-	if _, statErr := filepathStat(p); statErr != nil {
+	info, statErr := filepathStat(p)
+	if statErr != nil {
 		return c.Redirect(http.StatusFound, "/static/img/placeholder.svg")
+	}
+	etag := fmt.Sprintf(`"cover-%d-%d"`, id, info.ModTime().Unix())
+	c.Response().Header().Set("ETag", etag)
+	c.Response().Header().Set("Cache-Control", "private, max-age=86400")
+	if match := c.Request().Header.Get("If-None-Match"); match == etag {
+		return c.NoContent(http.StatusNotModified)
 	}
 	return c.File(p)
 }
@@ -154,6 +161,12 @@ func (s *Server) apiPage(c echo.Context) error {
 	pageNum, err := strconv.Atoi(c.Param("n"))
 	if err != nil || pageNum < 0 {
 		return fail(c, http.StatusBadRequest, fmt.Errorf("invalid page"))
+	}
+	etag := fmt.Sprintf(`"%d-%d-%d"`, n.ID, n.MTime, pageNum)
+	c.Response().Header().Set("ETag", etag)
+	c.Response().Header().Set("Cache-Control", "private, max-age=31536000, immutable")
+	if match := c.Request().Header.Get("If-None-Match"); match == etag {
+		return c.NoContent(http.StatusNotModified)
 	}
 	rc, name, release, err := s.openPage(ctx, n, pageNum)
 	if err != nil {

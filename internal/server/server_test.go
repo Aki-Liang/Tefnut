@@ -139,6 +139,36 @@ func TestApiComicDetailTagsLowercase(t *testing.T) {
 
 func itoa(i int64) string { return strconv.FormatInt(i, 10) }
 
+func TestPageSetsImmutableCacheHeadersAndETag(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	url := "/api/comics/" + itoa(n.ID) + "/pages/0"
+
+	// First request: expect 200 with Cache-Control and ETag.
+	req := httptest.NewRequest(http.MethodGet, url, nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body.String())
+	}
+	if cc := rec.Header().Get("Cache-Control"); cc == "" {
+		t.Fatal("missing Cache-Control")
+	}
+	etag := rec.Header().Get("ETag")
+	if etag == "" {
+		t.Fatal("missing ETag")
+	}
+
+	// Conditional request: expect 304.
+	req2 := httptest.NewRequest(http.MethodGet, url, nil)
+	req2.Header.Set("If-None-Match", etag)
+	rec2 := httptest.NewRecorder()
+	e.ServeHTTP(rec2, req2)
+	if rec2.Code != 304 {
+		t.Fatalf("conditional status = %d, want 304", rec2.Code)
+	}
+}
+
 func TestApiPageThumb(t *testing.T) {
 	s, e, db := newTestServer(t)
 	n := seedComic(t, db, s.dataDir)
