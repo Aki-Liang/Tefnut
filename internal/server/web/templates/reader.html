@@ -1,13 +1,18 @@
 {{define "title"}}{{.Name}} · 阅读{{end}}
+{{define "sidebar"}}{{- "" -}}{{end}}
+{{define "mainclass"}}reader-main{{end}}
 {{define "content"}}
 <div id="reader" data-id="{{.ID}}" data-pages="{{.PageCount}}" data-start="{{.LastPage}}">
   <div class="reader-stage">
-    <button class="nav prev" id="prev">‹</button>
+    <button class="nav prev" id="prev" aria-label="上一页">‹</button>
     <img id="page" alt="page">
-    <button class="nav next" id="next">›</button>
+    <button class="nav next" id="next" aria-label="下一页">›</button>
   </div>
   <div class="reader-bar">
+    <a class="back" href="/">← 返回</a>
+    <button class="pagebtn" id="prevbtn">上一页</button>
     <span id="counter"></span>
+    <button class="pagebtn" id="nextbtn">下一页</button>
     <div class="meta">
       <label>作者 <input id="author" value="{{.Author}}"></label>
       <label>评分 <select id="rating">{{range .Ratings}}<option value="{{.}}" {{if eq . $.Rating}}selected{{end}}>{{.}}★</option>{{end}}</select></label>

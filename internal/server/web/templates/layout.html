@@ -7,8 +7,26 @@
 <link rel="stylesheet" href="/static/css/app.css">
 </head>
 <body>
-<header class="topbar"><a href="/" class="brand">Tefnut</a><a href="/tags" class="navlink">标签管理</a></header>
-<main>{{block "content" .}}{{end}}</main>
+{{block "sidebar" .}}
+<aside class="sidebar">
+  <div class="brand">Tefnut</div>
+  <nav>
+    <a href="/" data-path="/">图书馆</a>
+    <a href="/tags" data-path="/tags">标签管理</a>
+    <a href="/settings" data-path="/settings">设置</a>
+  </nav>
+</aside>
+<script>
+  (function () {
+    var p = location.pathname;
+    document.querySelectorAll('.sidebar nav a').forEach(function (a) {
+      var d = a.getAttribute('data-path');
+      if (d === '/' ? p === '/' || p.indexOf('/folder') === 0 : p.indexOf(d) === 0) a.classList.add('active');
+    });
+  })();
+</script>
+{{end}}
+<main class="{{block "mainclass" .}}with-sidebar{{end}}">{{block "content" .}}{{end}}</main>
 {{block "scripts" .}}{{end}}
 </body>
 </html>{{end}}

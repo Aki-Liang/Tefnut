@@ -365,3 +365,26 @@ func TestPageSettingsRenders(t *testing.T) {
 		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestSidebarOnBrowseNotReader(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	// browse has the sidebar nav
+	brec := httptest.NewRecorder()
+	e.ServeHTTP(brec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if !strings.Contains(brec.Body.String(), `class="sidebar"`) {
+		t.Fatalf("browse should have sidebar: %s", brec.Body.String())
+	}
+	if !strings.Contains(brec.Body.String(), "设置") {
+		t.Fatal("sidebar should link 设置")
+	}
+	// reader has no sidebar
+	rrec := httptest.NewRecorder()
+	e.ServeHTTP(rrec, httptest.NewRequest(http.MethodGet, "/read/"+itoa(n.ID), nil))
+	if strings.Contains(rrec.Body.String(), `class="sidebar"`) {
+		t.Fatal("reader should NOT have sidebar")
+	}
+	if !strings.Contains(rrec.Body.String(), "下一页") {
+		t.Fatal("reader should have a visible 下一页 button")
+	}
+}

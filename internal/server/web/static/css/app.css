@@ -1,9 +1,7 @@
 * { box-sizing: border-box; }
 body { margin: 0; font-family: system-ui, sans-serif; background: #14161a; color: #e6e6e6; }
-.topbar { display: flex; gap: 16px; align-items: center; padding: 12px 20px; background: #1c1f26; }
 .brand { font-weight: 700; color: #fff; text-decoration: none; }
 .navlink, .crumbs a { color: #8ab4f8; text-decoration: none; }
-main { padding: 20px; }
 .toolbar .filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
 .toolbar input, .toolbar select, .toolbar button { padding: 6px 10px; background: #222; color: #eee; border: 1px solid #333; border-radius: 6px; }
 .grid { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
@@ -14,7 +12,7 @@ main { padding: 20px; }
 .empty { color: #888; }
 .reader-stage { position: relative; display: flex; justify-content: center; align-items: center; min-height: 70vh; }
 #page { max-height: 85vh; max-width: 100%; }
-.nav { position: absolute; top: 0; bottom: 0; width: 25%; background: transparent; border: 0; color: transparent; font-size: 40px; cursor: pointer; }
+.nav { position: absolute; top: 0; bottom: 0; width: 25%; background: transparent; border: 0; font-size: 40px; cursor: pointer; }
 .nav.prev { left: 0; } .nav.next { right: 0; }
 .reader-bar { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; padding: 10px; background: #1c1f26; }
 .reader-bar input, .reader-bar select { background: #222; color: #eee; border: 1px solid #333; border-radius: 6px; padding: 4px 8px; }
@@ -22,3 +20,31 @@ main { padding: 20px; }
 .tags .tag button { background: none; border: 0; color: #f88; cursor: pointer; }
 #taglist { list-style: none; padding: 0; } #taglist li { display: flex; gap: 8px; align-items: center; margin: 6px 0; }
 #taglist .cnt { color: #888; min-width: 28px; }
+
+/* sidebar layout */
+.sidebar { position: fixed; top: 0; left: 0; width: 180px; height: 100vh; background: #1c1f26; padding: 16px; box-sizing: border-box; }
+.sidebar .brand { font-weight: 700; color: #fff; margin-bottom: 18px; font-size: 18px; }
+.sidebar nav { display: flex; flex-direction: column; gap: 4px; }
+.sidebar nav a { color: #c7c7c7; text-decoration: none; padding: 8px 10px; border-radius: 6px; }
+.sidebar nav a:hover { background: #262b35; }
+.sidebar nav a.active { background: #2f3645; color: #fff; }
+main.with-sidebar { margin-left: 180px; padding: 20px; }
+main.reader-main { margin-left: 0; padding: 0; }
+
+/* visible reader paging buttons */
+.nav { background: rgba(40,46,58,0.55); color: #fff; }
+.nav:hover { background: rgba(60,70,90,0.8); }
+.pagebtn { background: #2a2f3a; color: #eee; border: 1px solid #3a4150; border-radius: 6px; padding: 6px 14px; cursor: pointer; }
+.pagebtn:hover { background: #343b48; }
+.reader-bar .back { color: #8ab4f8; text-decoration: none; margin-right: 8px; }
+
+/* settings page */
+.card-box { background: #1c1f26; border-radius: 10px; padding: 16px; margin-bottom: 18px; }
+.card-box h2 { margin-top: 0; font-size: 16px; }
+#paths { list-style: none; padding: 0; }
+#paths li { display: flex; gap: 10px; align-items: center; padding: 6px 0; }
+#paths .lib-name { font-weight: 600; min-width: 90px; }
+#paths .lib-path { color: #9aa3b2; flex: 1; word-break: break-all; }
+#addpath.row, #scanform { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+#scanform label { color: #ddd; }
+.card-box input, .card-box button { background: #222; color: #eee; border: 1px solid #333; border-radius: 6px; padding: 6px 10px; }

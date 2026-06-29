@@ -33,6 +33,8 @@ function show(n) {
 
 document.getElementById('next').onclick = () => show(cur + 1);
 document.getElementById('prev').onclick = () => show(cur - 1);
+document.getElementById('nextbtn').onclick = () => show(cur + 1);
+document.getElementById('prevbtn').onclick = () => show(cur - 1);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight') show(cur + 1);
   if (e.key === 'ArrowLeft') show(cur - 1);
