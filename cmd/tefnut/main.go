@@ -35,7 +35,18 @@ func main() {
 	tags := store.NewTagRepo(db)
 	progress := store.NewProgressRepo(db)
 
-	scanner := library.NewScanner(nodes, cfg.Library.RootPath, cfg.DataDir, cfg.Thumbnail.Width)
+	settingsRepo := store.NewSettingsRepo(db)
+	_ = settingsRepo
+	pathRepo := store.NewLibraryPathRepo(db)
+
+	// First-run seed: import the yaml rootPath as the first library.
+	if libs, err := pathRepo.List(context.Background()); err == nil && len(libs) == 0 && cfg.Library.RootPath != "" {
+		if _, err := pathRepo.Add(context.Background(), filepath.Base(cfg.Library.RootPath), cfg.Library.RootPath); err != nil {
+			log.Printf("seed library path: %v", err)
+		}
+	}
+
+	scanner := library.NewScanner(nodes, pathRepo, cfg.DataDir, cfg.Thumbnail.Width)
 
 	// Startup scan (blocking once, so the library is populated before serving).
 	if err := scanner.Scan(context.Background()); err != nil {

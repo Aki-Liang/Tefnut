@@ -110,6 +110,15 @@ func (r *NodeRepo) UpdateFileAttrs(ctx context.Context, id, size, mtime int64, p
 	return nil
 }
 
+func (r *NodeRepo) UpdateName(ctx context.Context, id int64, name string) error {
+	_, err := r.db.ExecContext(ctx,
+		`UPDATE nodes SET name=?, updated_at=? WHERE id=?`, name, time.Now().Unix(), id)
+	if err != nil {
+		return fmt.Errorf("store: update name %d: %w", id, err)
+	}
+	return nil
+}
+
 func (r *NodeRepo) UpdateMeta(ctx context.Context, id int64, author string, rating int) error {
 	_, err := r.db.ExecContext(ctx,
 		`UPDATE nodes SET author=?, rating=?, updated_at=? WHERE id=?`,

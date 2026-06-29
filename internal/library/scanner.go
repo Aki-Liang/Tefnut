@@ -16,14 +16,14 @@ import (
 
 type Scanner struct {
 	repo       *store.NodeRepo
-	root       string
+	paths      *store.LibraryPathRepo
 	dataDir    string
 	thumbWidth int
 	mu         sync.Mutex
 }
 
-func NewScanner(repo *store.NodeRepo, root, dataDir string, thumbWidth int) *Scanner {
-	return &Scanner{repo: repo, root: root, dataDir: dataDir, thumbWidth: thumbWidth}
+func NewScanner(repo *store.NodeRepo, paths *store.LibraryPathRepo, dataDir string, thumbWidth int) *Scanner {
+	return &Scanner{repo: repo, paths: paths, dataDir: dataDir, thumbWidth: thumbWidth}
 }
 
 func (s *Scanner) thumbPath(id int64) string {
@@ -34,15 +34,60 @@ func (s *Scanner) cacheDir(id int64) string {
 	return filepath.Join(s.dataDir, "cache", strconv.FormatInt(id, 10))
 }
 
-// Scan performs a full idempotent sync of root into the DB tree.
+// Scan performs a full idempotent sync of all configured library paths.
 func (s *Scanner) Scan(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	abs, err := filepath.Abs(s.root)
+
+	libs, err := s.paths.List(ctx)
 	if err != nil {
-		return fmt.Errorf("scanner: abs root: %w", err)
+		return fmt.Errorf("scanner: list library paths: %w", err)
 	}
-	return s.scanDir(ctx, abs, 0)
+	roots, err := s.repo.ListChildren(ctx, 0)
+	if err != nil {
+		return err
+	}
+	byPath := map[string]*store.Node{}
+	for _, n := range roots {
+		byPath[n.Path] = n
+	}
+
+	for _, lib := range libs {
+		abs, err := filepath.Abs(lib.Path)
+		if err != nil {
+			log.Printf("scanner: abs %s: %v", lib.Path, err)
+			continue
+		}
+		node, seen := byPath[abs]
+		if seen {
+			delete(byPath, abs)
+			if node.Name != lib.Name {
+				if err := s.repo.UpdateName(ctx, node.ID, lib.Name); err != nil {
+					log.Printf("scanner: rename root %d: %v", node.ID, err)
+				}
+			}
+		} else {
+			node, err = s.repo.Create(ctx, &store.Node{
+				ParentID: 0, Name: lib.Name, Path: abs, Type: store.NodeDir,
+			})
+			if err != nil {
+				log.Printf("scanner: create library node %s: %v", abs, err)
+				continue
+			}
+		}
+		if _, err := os.Stat(abs); err != nil {
+			log.Printf("scanner: library path %s unavailable: %v", abs, err)
+			continue
+		}
+		if err := s.scanDir(ctx, abs, node.ID); err != nil {
+			log.Printf("scanner: scan library %s: %v", abs, err)
+		}
+	}
+
+	for _, n := range byPath {
+		s.removeNode(ctx, n)
+	}
+	return nil
 }
 
 func (s *Scanner) scanDir(ctx context.Context, dir string, parentID int64) error {
