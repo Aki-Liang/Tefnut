@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
@@ -9,16 +10,27 @@ import (
 	"Tefnut/internal/store"
 )
 
+// Reconfigurer is satisfied by *scan.Manager via its Reconfigure method.
+type Reconfigurer interface {
+	Reconfigure(ctx context.Context) error
+}
+
 type Server struct {
 	nodes      *store.NodeRepo
 	tags       *store.TagRepo
 	progress   *store.ProgressRepo
+	settings   *store.SettingsRepo
+	paths      *store.LibraryPathRepo
+	reconf     Reconfigurer
 	dataDir    string
 	thumbWidth int
 }
 
-func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.ProgressRepo, dataDir string, thumbWidth int) *Server {
-	return &Server{nodes: nodes, tags: tags, progress: progress, dataDir: dataDir, thumbWidth: thumbWidth}
+func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.ProgressRepo,
+	settings *store.SettingsRepo, paths *store.LibraryPathRepo, reconf Reconfigurer,
+	dataDir string, thumbWidth int) *Server {
+	return &Server{nodes: nodes, tags: tags, progress: progress, settings: settings,
+		paths: paths, reconf: reconf, dataDir: dataDir, thumbWidth: thumbWidth}
 }
 
 // Register wires routes and static assets onto e.
@@ -46,6 +58,11 @@ func (s *Server) Register(e *echo.Echo) {
 	api.POST("/tags", s.apiCreateTag)
 	api.PATCH("/tags/:id", s.apiRenameTag)
 	api.DELETE("/tags/:id", s.apiDeleteTag)
+
+	api.GET("/settings", s.apiGetSettings)
+	api.PUT("/settings", s.apiUpdateSettings)
+	api.POST("/settings/paths", s.apiAddPath)
+	api.DELETE("/settings/paths/:id", s.apiDeletePath)
 
 	_ = http.StatusOK
 }

@@ -18,6 +18,10 @@ import (
 	"Tefnut/internal/store"
 )
 
+type stubReconf struct{ calls int }
+
+func (s *stubReconf) Reconfigure(ctx context.Context) error { s.calls++; return nil }
+
 func newTestServer(t *testing.T) (*Server, *echo.Echo, *store.DB) {
 	t.Helper()
 	data := t.TempDir()
@@ -26,7 +30,8 @@ func newTestServer(t *testing.T) (*Server, *echo.Echo, *store.DB) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { db.Close() })
-	s := NewServer(store.NewNodeRepo(db), store.NewTagRepo(db), store.NewProgressRepo(db), data, 400)
+	s := NewServer(store.NewNodeRepo(db), store.NewTagRepo(db), store.NewProgressRepo(db),
+		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), &stubReconf{}, data, 400)
 	e := echo.New()
 	s.Register(e)
 	return s, e, db
@@ -293,5 +298,61 @@ func TestPageReaderRenders(t *testing.T) {
 	e.ServeHTTP(rec, req)
 	if rec.Code != 200 || !strings.Contains(rec.Body.String(), "data-id=\""+itoa(n.ID)+"\"") {
 		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestApiGetSettingsDefaults(t *testing.T) {
+	_, e, _ := newTestServer(t)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/api/settings", nil))
+	if rec.Code != 200 || !strings.Contains(rec.Body.String(), `"scanMode":"interval"`) {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestApiUpdateSettingsValidatesMode(t *testing.T) {
+	_, e, _ := newTestServer(t)
+	req := httptest.NewRequest(http.MethodPut, "/api/settings",
+		strings.NewReader(`{"scanMode":"bogus","scanInterval":"2m","scanDailyTime":"03:00"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
+	}
+}
+
+func TestApiAddAndDeletePath(t *testing.T) {
+	_, e, db := newTestServer(t)
+	dir := t.TempDir()
+	body := `{"name":"L","path":"` + dir + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/api/settings/paths", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("add status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	list, _ := store.NewLibraryPathRepo(db).List(context.Background())
+	if len(list) != 1 {
+		t.Fatalf("expected 1 path, got %d", len(list))
+	}
+	del := httptest.NewRequest(http.MethodDelete, "/api/settings/paths/"+itoa(list[0].ID), nil)
+	drec := httptest.NewRecorder()
+	e.ServeHTTP(drec, del)
+	if drec.Code != 200 {
+		t.Fatalf("delete status=%d", drec.Code)
+	}
+}
+
+func TestApiAddPathRejectsMissingDir(t *testing.T) {
+	_, e, _ := newTestServer(t)
+	req := httptest.NewRequest(http.MethodPost, "/api/settings/paths",
+		strings.NewReader(`{"name":"L","path":"/no/such/dir/xyz"}`))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", rec.Code)
 	}
 }
