@@ -53,6 +53,38 @@ stage.addEventListener('wheel', (e) => {
   setZoom(stepZoom(zoom, e.deltaY < 0 ? 1 : -1));
 }, { passive: false });
 
+// ---- drag-to-pan an over-sized single/spread page (continuous scrolls on its own) ----
+// Native trackpad/wheel/scrollbar already pan via the stage's overflow:auto; this
+// adds grab-and-drag, and suppresses the edge page-turn click when a drag occurred.
+let panning = false, panMoved = false, panX = 0, panY = 0, panSL = 0, panST = 0;
+function stageOverflows() {
+  return stage.scrollWidth > stage.clientWidth + 1 || stage.scrollHeight > stage.clientHeight + 1;
+}
+stage.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0 || !stageOverflows()) return;
+  panning = true; panMoved = false;
+  panX = e.clientX; panY = e.clientY; panSL = stage.scrollLeft; panST = stage.scrollTop;
+  try { stage.setPointerCapture(e.pointerId); } catch (_) {}
+  stage.classList.add('panning');
+});
+stage.addEventListener('pointermove', (e) => {
+  if (!panning) return;
+  const dx = e.clientX - panX, dy = e.clientY - panY;
+  if (!panMoved && Math.hypot(dx, dy) > 4) panMoved = true;
+  if (panMoved) { stage.scrollLeft = panSL - dx; stage.scrollTop = panST - dy; }
+});
+const endPan = (e) => {
+  if (!panning) return;
+  panning = false; stage.classList.remove('panning');
+  try { stage.releasePointerCapture(e.pointerId); } catch (_) {}
+};
+stage.addEventListener('pointerup', endPan);
+stage.addEventListener('pointercancel', endPan);
+// capture-phase: a click that ends a drag must not reach the nav page-turn zones
+stage.addEventListener('click', (e) => {
+  if (panMoved) { e.stopPropagation(); e.preventDefault(); panMoved = false; }
+}, true);
+
 let contLazyObs = null, contPageObs = null, contScrollEl = null, contScrollFn = null;
 
 function pageURL(n) { return `/api/comics/${id}/pages/${n}`; }

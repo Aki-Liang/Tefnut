@@ -210,9 +210,13 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
 #reader { display: flex; flex-direction: column; height: 100%; }
 
 .reader-stage {
-  position: relative; display: flex; justify-content: center; align-items: center;
-  flex: 1 1 auto; min-height: 0; overflow: hidden; background: var(--ink-2);
+  position: relative; display: flex; justify-content: safe center; align-items: safe center;
+  flex: 1 1 auto; min-height: 0; overflow: auto; background: var(--ink-2);
 }
+/* an over-sized single/spread page can be panned: native scroll + drag */
+#page, .spread img { cursor: grab; }
+.reader-stage.panning { cursor: grabbing; }
+.reader-stage.panning #page, .reader-stage.panning .spread img { cursor: grabbing; }
 #reader { --page-zoom: 1; --stage-h: 100vh; }
 #page, .cpage, .spread img { box-shadow: 0 0 0 1px var(--line); display: block; object-fit: contain; }
 
