@@ -1,3 +1,5 @@
+import { clampZoom, stepZoom, parsePercent, normFit } from './zoom.js';
+
 const el = document.getElementById('reader');
 const id = el.dataset.id;
 const total = parseInt(el.dataset.pages, 10);
@@ -10,6 +12,31 @@ const stage = document.querySelector('.reader-stage');
 const counter = document.getElementById('counter');
 const thumbsEl = document.getElementById('thumbs');
 const stripEl = document.getElementById('thumbstrip');
+
+// ---- view state: fit mode + zoom (global, localStorage) ----
+let fit = normFit(localStorage.getItem('readerFit'));
+let zoom = clampZoom(parseFloat(localStorage.getItem('readerZoom')));
+
+function measureStage() {
+  el.style.setProperty('--stage-h', stage.clientHeight + 'px');
+}
+function updateZoomLabel() {
+  const input = document.getElementById('zoominput');
+  if (input && document.activeElement !== input) input.value = String(Math.round(zoom * 100));
+}
+function applyView() {
+  el.dataset.fit = fit;
+  el.style.setProperty('--page-zoom', String(zoom));
+  measureStage();
+  const fl = document.getElementById('fitlabel');
+  if (fl) fl.textContent = fit === 'width' ? '宽' : '高';
+  updateZoomLabel();
+  localStorage.setItem('readerFit', fit);
+  localStorage.setItem('readerZoom', String(zoom));
+}
+function setZoom(z) { zoom = clampZoom(z); applyView(); }
+function setFit(f) { fit = normFit(f); zoom = 1; applyView(); }
+window.addEventListener('resize', measureStage);
 
 let contLazyObs = null, contPageObs = null;
 
@@ -234,4 +261,4 @@ applyStepLabel();
 applyStripCollapsed();
 buildStrip();
 loadDetail();
-if (total > 0) setMode(mode); else counter.textContent = '无可显示页面';
+if (total > 0) { setMode(mode); applyView(); } else counter.textContent = '无可显示页面';
