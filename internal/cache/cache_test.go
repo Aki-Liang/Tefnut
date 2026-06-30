@@ -53,3 +53,31 @@ func TestEnforceNoopWhenUnderBudget(t *testing.T) {
 		t.Fatalf("evicted = %d, want 0", n)
 	}
 }
+
+func TestEnforceDisabledWhenMaxBytesNonPositive(t *testing.T) {
+	root := t.TempDir()
+	writeDir(t, root, "1", 1<<20, time.Now()) // 1 MiB, well over a tiny budget
+	for _, max := range []int64{0, -1} {
+		n, err := Enforce(root, max)
+		if err != nil {
+			t.Fatalf("maxBytes=%d: %v", max, err)
+		}
+		if n != 0 {
+			t.Fatalf("maxBytes=%d: evicted = %d, want 0 (eviction disabled)", max, n)
+		}
+		if _, err := os.Stat(filepath.Join(root, "1")); err != nil {
+			t.Fatalf("maxBytes=%d: dir should be untouched: %v", max, err)
+		}
+	}
+}
+
+func TestEnforceMissingRootIsNoop(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "does-not-exist")
+	n, err := Enforce(missing, 1<<10)
+	if err != nil {
+		t.Fatalf("missing root should be a no-op, got err: %v", err)
+	}
+	if n != 0 {
+		t.Fatalf("evicted = %d, want 0", n)
+	}
+}

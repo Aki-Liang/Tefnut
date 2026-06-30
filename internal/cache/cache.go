@@ -2,7 +2,9 @@
 package cache
 
 import (
+	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -41,7 +43,7 @@ func Enforce(root string, maxBytes int64) (int, error) {
 	}
 	entries, err := os.ReadDir(root)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return 0, nil
 		}
 		return 0, fmt.Errorf("cache: read %s: %w", root, err)
@@ -53,13 +55,17 @@ func Enforce(root string, maxBytes int64) (int, error) {
 			continue
 		}
 		p := filepath.Join(root, e.Name())
+		// A single unreadable/racing subdir must not block the whole sweep:
+		// log it and keep going so the budget is still enforced over the rest.
 		sz, err := dirSize(p)
 		if err != nil {
-			return 0, fmt.Errorf("cache: size %s: %w", p, err)
+			log.Printf("cache: size %s: %v", p, err)
+			continue
 		}
 		info, err := e.Info()
 		if err != nil {
-			return 0, fmt.Errorf("cache: stat %s: %w", p, err)
+			log.Printf("cache: stat %s: %v", p, err)
+			continue
 		}
 		dirs = append(dirs, dirInfo{path: p, size: sz, mtime: info.ModTime().Unix()})
 		total += sz
@@ -67,7 +73,13 @@ func Enforce(root string, maxBytes int64) (int, error) {
 	if total <= maxBytes {
 		return 0, nil
 	}
-	sort.Slice(dirs, func(i, j int) bool { return dirs[i].mtime < dirs[j].mtime })
+	// Oldest-modified first; tie-break on path so equal-mtime eviction is deterministic.
+	sort.Slice(dirs, func(i, j int) bool {
+		if dirs[i].mtime != dirs[j].mtime {
+			return dirs[i].mtime < dirs[j].mtime
+		}
+		return dirs[i].path < dirs[j].path
+	})
 	evicted := 0
 	for _, d := range dirs {
 		if total <= maxBytes {
