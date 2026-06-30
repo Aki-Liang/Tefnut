@@ -1,0 +1,34 @@
+{{define "layout"}}<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{block "title" .}}Tefnut{{end}}</title>
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+{{block "sidebar" .}}
+<button id="sidebar-toggle" class="sidebar-toggle" aria-label="切换侧栏">☰</button>
+<aside class="sidebar">
+  <div class="brand">Tefnut</div>
+  <nav>
+    <a href="/" data-path="/">图书馆</a>
+    <a href="/tags" data-path="/tags">标签管理</a>
+    <a href="/settings" data-path="/settings">设置</a>
+  </nav>
+</aside>
+<script>
+  (function () {
+    var p = location.pathname;
+    document.querySelectorAll('.sidebar nav a').forEach(function (a) {
+      var d = a.getAttribute('data-path');
+      if (d === '/' ? p === '/' || p.indexOf('/folder') === 0 : p.indexOf(d) === 0) a.classList.add('active');
+    });
+  })();
+</script>
+<script src="/static/js/sidebar.js"></script>
+{{end}}
+<main class="{{block "mainclass" .}}with-sidebar{{end}}">{{block "content" .}}{{end}}</main>
+{{block "scripts" .}}{{end}}
+</body>
+</html>{{end}}

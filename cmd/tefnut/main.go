@@ -1,64 +1,81 @@
 package main
 
 import (
-	"Tefnut/application"
-	"Tefnut/configs"
-	service_impl "Tefnut/internal/domain/service/impl"
-	"Tefnut/internal/handler"
-	"Tefnut/internal/handler/cron_impl"
-	"Tefnut/internal/handler/handler_impl"
-	"Tefnut/internal/infrastructure/repository_impl"
-	_ "github.com/go-sql-driver/mysql"
+	"context"
+	"flag"
+	"log"
+	"path/filepath"
+	"strings"
+
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
-	"github.com/robfig/cron/v3"
-	"xorm.io/xorm"
+
+	"Tefnut/internal/config"
+	"Tefnut/internal/library"
+	"Tefnut/internal/scan"
+	"Tefnut/internal/server"
+	"Tefnut/internal/store"
 )
 
 func main() {
-	app := application.GetApp()
-	err := configs.NewConfig().Load("./config.yaml", app.Config)
+	cfgPath := flag.String("config", "./config.yaml", "path to config.yaml")
+	flag.Parse()
+
+	cfg, err := config.Load(*cfgPath)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
-	engine, err := xorm.NewEngine("mysql", app.Config.DbConfig.Conn)
+	db, err := store.Open(filepath.Join(cfg.DataDir, "tefnut.db"))
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
-	engine.ShowSQL(true)
+	defer db.Close()
 
-	//repository
-	fsRepo := repository_impl.NewLibraryRepositoryImpl(engine)
+	nodes := store.NewNodeRepo(db)
+	tags := store.NewTagRepo(db)
+	progress := store.NewProgressRepo(db)
 
-	//service
-	libService := service_impl.NewLibraryServiceImpl().SetConfig(app.Config.FsConfig).SetLibraryRepository(fsRepo)
+	settingsRepo := store.NewSettingsRepo(db)
+	pathRepo := store.NewLibraryPathRepo(db)
 
-	//cron
-	fileScanCron := cron_impl.NewFileScanCron().SetLibraryService(libService)
-	c := cron.New()
-	c.AddFunc("*/2 * * * *", fileScanCron.Scan) //for test now
-	c.Start()
+	// First-run seed: import the yaml rootPath as the first library.
+	if libs, err := pathRepo.List(context.Background()); err == nil && len(libs) == 0 && cfg.Library.RootPath != "" {
+		if _, err := pathRepo.Add(context.Background(), filepath.Base(cfg.Library.RootPath), cfg.Library.RootPath); err != nil {
+			log.Printf("seed library path: %v", err)
+		}
+	}
 
-	//http handler
-	tefnutHandlerImpl := handler_impl.NewTefnutHandlerImpl().SetLibraryService(libService)
-	tefnutHandler := handler.NewTefnutHandler().SetImpl(tefnutHandlerImpl)
+	scanner := library.NewScanner(nodes, pathRepo, cfg.DataDir, cfg.Thumbnail.Width)
+
+	manager := scan.New(scanner, settingsRepo, pathRepo, cfg.DataDir, cfg.Cache.MaxBytes)
+	if err := manager.Start(context.Background()); err != nil {
+		log.Printf("scan manager start: %v", err)
+	}
+	defer manager.Stop()
+
+	srv := server.NewServer(nodes, tags, progress, settingsRepo, pathRepo, manager, cfg.DataDir, cfg.Thumbnail.Width, cfg.Thumbnail.PageWidth)
 
 	e := echo.New()
-
-	// Middleware
+	e.HideBanner = true
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	// Gzip HTML/JSON/JS/CSS but skip already-compressed image bodies on the
+	// hottest endpoints (page, page-thumb, cover) — no savings, wasted CPU, and
+	// it would buffer streamed pages.
+	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
+		Skipper: func(c echo.Context) bool {
+			p := c.Path() // registered route template
+			return strings.Contains(p, "/pages/") || strings.HasSuffix(p, "/cover")
+		},
+	}))
+	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
+		ContentTypeNosniff: "nosniff",
+	}))
+	srv.Register(e)
 
-	// Routes
-	root := e.Group("/tefnut")
-	root.Static("/resource", app.Config.FsConfig.TempPath)
-
-	g := root.Group("/api/v1")
-	// library
-	gLib := g.Group("/library")
-	gLib.Any("/list", tefnutHandler.LibList)
-	gLib.GET("/content/:id", tefnutHandler.LibContentGet)
-
-	e.Logger.Fatal(e.Start(":8086"))
+	log.Printf("tefnut listening on %s, library=%s", cfg.Server.Addr, cfg.Library.RootPath)
+	if err := e.Start(cfg.Server.Addr); err != nil {
+		log.Fatal(err)
+	}
 }

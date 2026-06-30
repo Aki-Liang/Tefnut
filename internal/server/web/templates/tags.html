@@ -1,0 +1,9 @@
+{{define "title"}}标签管理 · Tefnut{{end}}
+{{define "content"}}
+<h1>标签管理</h1>
+<form id="newtagform"><input id="newtagname" placeholder="新建标签"><button>新建</button></form>
+<ul id="taglist">
+  {{range .Tags}}<li data-id="{{.ID}}"><span class="cnt">{{.Count}}</span><input class="tname" value="{{.Name}}"><button class="rename">重命名</button><button class="del">删除</button></li>{{end}}
+</ul>
+{{end}}
+{{define "scripts"}}<script src="/static/js/tags.js"></script>{{end}}
