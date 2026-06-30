@@ -126,18 +126,16 @@ function updateStripActive() {
 }
 
 // ---- navigation (mode-aware) ----
-function spreadStart(n) { if (n <= 0) return 0; return n % 2 === 1 ? n : n - 1; } // [0],[1,2],[3,4]...
+// In spread mode cur is the left page of the shown pair; turning steps by
+// spreadStep (1 or 2) with no re-alignment, so changing the step never moves
+// the current view. goTo clamps to [0, total-1].
 function advance() {
-  if (mode === 'spread') {
-    if (spreadStep === 1) { if (cur + 1 < total) goTo(cur + 1); }
-    else { const ns = cur === 0 ? 1 : cur + 2; if (ns < total) goTo(ns); }
-  } else { goTo(cur + 1); }
+  if (mode === 'spread') goTo(cur + spreadStep);
+  else goTo(cur + 1);
 }
 function back() {
-  if (mode === 'spread') {
-    if (spreadStep === 1) { if (cur > 0) goTo(cur - 1); }
-    else { goTo(cur <= 1 ? 0 : cur - 2); }
-  } else { goTo(cur - 1); }
+  if (mode === 'spread') goTo(cur - spreadStep);
+  else goTo(cur - 1);
 }
 
 function bindZones() {
@@ -154,15 +152,11 @@ function renderSingle() {
   bindZones(); preload(cur + 1);
 }
 function renderSpread() {
-  let start = spreadStep === 2 ? spreadStart(cur) : cur;
-  cur = start;
-  let pages;
-  if (spreadStep === 2 && start === 0) pages = [0];
-  else pages = (start + 1 < total) ? [start, start + 1] : [start];
+  const pages = (cur + 1 < total) ? [cur, cur + 1] : [cur];
   const ordered = dir === 'rtl' ? pages.slice().reverse() : pages;
   const imgs = ordered.map((p) => `<img src="${pageURL(p)}" alt="page">`).join('');
   stage.innerHTML = '<button class="nav prev" id="prev" aria-label="上一页">‹</button><div class="spread">' + imgs + '</div><button class="nav next" id="next" aria-label="下一页">›</button>';
-  bindZones(); preload(start + 2);
+  bindZones(); preload(cur + 2);
 }
 function buildContinuous() {
   stage.innerHTML = '<div class="continuous" id="cont"></div>';
@@ -291,7 +285,8 @@ document.getElementById('stepbtn').onclick = () => {
   spreadStep = spreadStep === 2 ? 1 : 2;
   localStorage.setItem('spreadStep', String(spreadStep));
   applyStepLabel();
-  if (mode === 'spread') goTo(cur);
+  // do NOT re-render: changing the step keeps the current view; the new step
+  // takes effect on the next page turn.
 };
 
 // ---- metadata editing ----

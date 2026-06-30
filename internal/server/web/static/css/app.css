@@ -152,11 +152,12 @@ main.with-sidebar { margin-left: 188px; padding: 26px 28px; transition: margin-l
 /* folder card — a screentone "volume box", distinct from a comic panel */
 .card.dir .cover.folder {
   display: flex; align-items: center; justify-content: center;
-  font-family: var(--font-display); font-size: 64px; color: var(--muted);
+  color: var(--muted);
   background-color: var(--panel);
   background-image: var(--tone); background-size: 9px 9px;
   border-style: dashed;
 }
+.card.dir .cover.folder .folder-glyph { width: 46%; height: auto; transition: color 0.12s ease; }
 .card.dir a:hover .cover.folder { color: var(--seal); }
 
 .empty {
