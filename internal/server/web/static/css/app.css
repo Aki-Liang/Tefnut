@@ -379,3 +379,34 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
 
 /* match the slimmer ink-filled controls in the reader bar */
 .reader-bar .dd-trigger { background: var(--ink); padding: 5px 8px; }
+
+/* ---- comic detail page ---- */
+.back-link { display: inline-block; margin: -8px 0 16px; }
+.detail { display: flex; gap: 28px; align-items: flex-start; max-width: 920px; }
+.detail-cover { flex: 0 0 300px; }
+.detail-cover img {
+  width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block;
+  border: 2px solid var(--line); border-radius: 4px; background: var(--panel);
+}
+.detail-meta { flex: 1 1 auto; min-width: 0; }
+.detail-title { font-family: var(--font-display); font-weight: 400; font-size: 22px; line-height: 1.2; margin: 0 0 18px; word-break: break-all; }
+.detail-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; color: var(--muted); flex-wrap: wrap; }
+.detail-row input {
+  background: var(--ink); color: var(--paper); border: 2px solid var(--line);
+  border-radius: 6px; padding: 7px 10px; font-size: 13px;
+}
+#d-author { min-width: 240px; }
+.stars-edit { display: inline-flex; gap: 2px; }
+.star { background: none; border: none; cursor: pointer; font-size: 22px; line-height: 1; padding: 0 1px; color: var(--muted); }
+.star.on { color: var(--seal); }
+.tags-row .tags { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.tag { display: inline-flex; align-items: center; gap: 2px; background: var(--panel-2); color: var(--paper); border: 2px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12px; }
+.tag .del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; line-height: 1; }
+.tag .del:hover { color: var(--seal); }
+.read-btn {
+  display: inline-block; margin-top: 10px; padding: 11px 30px;
+  background: var(--seal); color: var(--ink-2); text-decoration: none;
+  font-family: var(--font-display); letter-spacing: 0.08em; border-radius: 6px;
+  border: 2px solid var(--seal); font-size: 16px;
+}
+.read-btn:hover { background: var(--seal-dim); border-color: var(--seal-dim); }
