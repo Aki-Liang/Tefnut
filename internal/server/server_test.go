@@ -31,7 +31,7 @@ func newTestServer(t *testing.T) (*Server, *echo.Echo, *store.DB) {
 	}
 	t.Cleanup(func() { db.Close() })
 	s := NewServer(store.NewNodeRepo(db), store.NewTagRepo(db), store.NewProgressRepo(db),
-		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), &stubReconf{}, data, 400, 120)
+		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), &stubReconf{}, data, 400, 120, nil)
 	e := echo.New()
 	s.Register(e)
 	return s, e, db
@@ -400,8 +400,9 @@ func TestApiUpdateSettingsValidatesMode(t *testing.T) {
 }
 
 func TestApiAddAndDeletePath(t *testing.T) {
-	_, e, db := newTestServer(t)
+	s, e, db := newTestServer(t)
 	dir := t.TempDir()
+	s.allowedRoots = []string{dir}
 	body := `{"name":"L","path":"` + dir + `"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/settings/paths", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -443,7 +444,7 @@ func TestSettingsUpdateTriggersReconfigure(t *testing.T) {
 	defer db.Close()
 	rc := &stubReconf{}
 	s := NewServer(store.NewNodeRepo(db), store.NewTagRepo(db), store.NewProgressRepo(db),
-		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), rc, data, 400, 120)
+		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), rc, data, 400, 120, nil)
 	e := echo.New()
 	s.Register(e)
 	req := httptest.NewRequest(http.MethodPut, "/api/settings",
@@ -626,6 +627,38 @@ func TestServerErrorBodyIsGeneric(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), "internal error") {
 		t.Fatalf("5xx body = %s, want generic message", rec.Body.String())
+	}
+}
+
+func TestApiAddPathRejectsOutsideRoot(t *testing.T) {
+	s, e, _ := newTestServer(t)
+	root := t.TempDir()
+	s.allowedRoots = []string{root}
+
+	post := func(path string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/api/settings/paths",
+			strings.NewReader(`{"name":"L","path":"`+path+`"}`))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		return rec
+	}
+
+	inside := filepath.Join(root, "lib")
+	if err := os.MkdirAll(inside, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if rec := post(inside); rec.Code != 200 {
+		t.Fatalf("inside root: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+
+	outside := t.TempDir() // exists, readable, but not under root
+	rec := post(outside)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("outside root: status=%d, want 400", rec.Code)
+	}
+	if strings.Contains(rec.Body.String(), root) {
+		t.Fatalf("400 body leaked the root path: %s", rec.Body.String())
 	}
 }
 

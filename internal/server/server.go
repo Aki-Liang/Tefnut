@@ -32,13 +32,14 @@ type Server struct {
 	thumbs         *thumbCache
 	readers        *archive.ReaderCache
 	decodeSem      chan struct{}
+	allowedRoots   []string
 }
 
 const thumbCacheMaxEntries = 512
 
 func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.ProgressRepo,
 	settings *store.SettingsRepo, paths *store.LibraryPathRepo, reconf Reconfigurer,
-	dataDir string, thumbWidth int, pageThumbWidth int) *Server {
+	dataDir string, thumbWidth int, pageThumbWidth int, allowedRoots []string) *Server {
 	// lru.New only errors on size<=0; thumbCacheMaxEntries is a positive
 	// constant, so the ignored error is safe.
 	tc, _ := newThumbCache(thumbCacheMaxEntries, filepath.Join(dataDir, "thumbs"))
@@ -46,7 +47,8 @@ func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.Progr
 		paths: paths, reconf: reconf, dataDir: dataDir, thumbWidth: thumbWidth,
 		pageThumbWidth: pageThumbWidth,
 		thumbs:         tc, readers: archive.NewReaderCache(archiveCacheSize),
-		decodeSem: make(chan struct{}, decodeConcurrency)}
+		decodeSem:    make(chan struct{}, decodeConcurrency),
+		allowedRoots: allowedRoots}
 }
 
 // Register wires routes and static assets onto e.
