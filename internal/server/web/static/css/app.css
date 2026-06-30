@@ -400,9 +400,10 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
 .star { background: none; border: none; cursor: pointer; font-size: 22px; line-height: 1; padding: 0 1px; color: var(--muted); }
 .star.on { color: var(--seal); }
 .tags-row .tags { display: inline-flex; flex-wrap: wrap; gap: 6px; }
-.tag { display: inline-flex; align-items: center; gap: 2px; background: var(--panel-2); color: var(--paper); border: 2px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12px; }
-.tag .del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; line-height: 1; }
-.tag .del:hover { color: var(--seal); }
+/* scoped to .detail so it doesn't collide with the older `.tags .tag` pill rule */
+.detail .tag { display: inline-flex; align-items: center; gap: 2px; background: var(--panel-2); color: var(--paper); border: 2px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12px; }
+.detail .tag .del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; line-height: 1; }
+.detail .tag .del:hover { color: var(--seal); }
 .read-btn {
   display: inline-block; margin-top: 10px; padding: 11px 30px;
   background: var(--seal); color: var(--ink-2); text-decoration: none;
