@@ -7,13 +7,13 @@ test('constants', () => {
   assert.equal(ZOOM_STEP, 0.1);
 });
 
-test('clampZoom floors at MIN_ZOOM, no upper cap, NaN->1', () => {
+test('clampZoom floors at MIN_ZOOM, no upper cap, non-finite->1', () => {
   assert.equal(clampZoom(0.05), 0.1);
   assert.equal(clampZoom(0.1), 0.1);
   assert.equal(clampZoom(1), 1);
   assert.equal(clampZoom(50), 50);        // 5000%, uncapped
   assert.equal(clampZoom(NaN), 1);
-  assert.equal(clampZoom(Infinity), Infinity); // finite check lets +Inf through as-is? see impl note
+  assert.equal(clampZoom(Infinity), 1);   // non-finite (e.g. hand-edited storage) -> 1
 });
 
 test('stepZoom steps by 0.1 with no float drift and floors', () => {

@@ -53,7 +53,7 @@ stage.addEventListener('wheel', (e) => {
   setZoom(stepZoom(zoom, e.deltaY < 0 ? 1 : -1));
 }, { passive: false });
 
-let contLazyObs = null, contPageObs = null;
+let contLazyObs = null, contPageObs = null, contScrollEl = null, contScrollFn = null;
 
 function pageURL(n) { return `/api/comics/${id}/pages/${n}`; }
 function clampPage(n) { return Math.max(0, Math.min(n, total - 1)); }
@@ -143,20 +143,46 @@ function buildContinuous() {
   contLazyObs = new IntersectionObserver((es) => {
     es.forEach((e) => { if (e.isIntersecting) { const im = e.target; if (!im.src && im.dataset.src) { im.src = im.dataset.src; contLazyObs.unobserve(im); } } });
   }, { root: cont, rootMargin: '300px' });
-  const visible = new Set();
-  contPageObs = new IntersectionObserver((es) => {
-    es.forEach((e) => {
-      const n = parseInt(e.target.dataset.page, 10);
-      if (e.isIntersecting) visible.add(n); else visible.delete(n);
+  // Page tracking (counter + progress + strip highlight). Geometry-based so it
+  // is robust to pages taller than the viewport — a visibility-ratio threshold
+  // can never be met by such a page, which would freeze tracking. The current
+  // page is the one straddling the container's top edge, else the topmost
+  // intersecting page. The observer keeps `inter` (which pages are on screen);
+  // a rAF-throttled scroll listener gives smooth updates within a tall page.
+  const inter = new Set();
+  function pickCurrent() {
+    if (!inter.size) return;
+    const ct = cont.getBoundingClientRect().top;
+    let straddle = null, topmost = null, topmostY = Infinity;
+    inter.forEach((n) => {
+      const im = cont.querySelector(`.cpage[data-page="${n}"]`);
+      if (!im) return;
+      const r = im.getBoundingClientRect();
+      if (r.top <= ct + 2 && r.bottom > ct + 2 && (straddle === null || n < straddle)) straddle = n;
+      if (r.top < topmostY) { topmostY = r.top; topmost = n; }
     });
-    if (!visible.size) return;
-    const top = Math.min(...visible);
-    if (top === cur) return;
-    cur = top;
+    const pick = straddle !== null ? straddle : topmost;
+    if (pick === null || pick === cur) return;
+    cur = pick;
     counter.textContent = `${cur + 1} / ${total}`;
     saveProgress(cur);
     updateStripActive();
-  }, { root: cont, threshold: 0.5 });
+  }
+  let rafPending = false;
+  const onContScroll = () => {
+    if (rafPending) return;
+    rafPending = true;
+    requestAnimationFrame(() => { rafPending = false; pickCurrent(); });
+  };
+  contPageObs = new IntersectionObserver((es) => {
+    es.forEach((e) => {
+      const n = parseInt(e.target.dataset.page, 10);
+      if (e.isIntersecting) inter.add(n); else inter.delete(n);
+    });
+    pickCurrent();
+  }, { root: cont, threshold: [0, 0.5, 1] });
+  cont.addEventListener('scroll', onContScroll, { passive: true });
+  contScrollEl = cont; contScrollFn = onContScroll;
   cont.querySelectorAll('.cpage').forEach((im) => { contLazyObs.observe(im); contPageObs.observe(im); });
 }
 function scrollToPage(n) {
@@ -178,6 +204,7 @@ function goTo(page) {
 function teardownContinuous() {
   if (contLazyObs) { contLazyObs.disconnect(); contLazyObs = null; }
   if (contPageObs) { contPageObs.disconnect(); contPageObs = null; }
+  if (contScrollEl && contScrollFn) { contScrollEl.removeEventListener('scroll', contScrollFn); contScrollEl = null; contScrollFn = null; }
 }
 
 function setMode(m) {
@@ -275,6 +302,7 @@ document.getElementById('stripToggle').onclick = () => {
   stripCollapsed = !stripCollapsed;
   localStorage.setItem('stripCollapsed', stripCollapsed ? '1' : '0');
   applyStripCollapsed();
+  measureStage(); // the strip changing height resizes the stage; keep fit=height accurate
 };
 
 // ---- init ----

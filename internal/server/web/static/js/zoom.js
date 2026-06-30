@@ -4,9 +4,10 @@ export const ZOOM_STEP = 0.1;
 
 function round2(z) { return Math.round(z * 100) / 100; }
 
-// clampZoom: floor at MIN_ZOOM, no upper cap, round to 2 decimals. NaN -> 1.
+// clampZoom: floor at MIN_ZOOM, no upper cap, round to 2 decimals.
+// Non-finite (NaN or ±Infinity, e.g. a hand-edited localStorage) -> 1.
 export function clampZoom(z) {
-  if (Number.isNaN(z)) return 1;
+  if (!Number.isFinite(z)) return 1;
   if (z < MIN_ZOOM) return MIN_ZOOM;
   return round2(z);
 }
