@@ -605,6 +605,30 @@ func TestReaderHasModeToggle(t *testing.T) {
 	}
 }
 
+func TestServerErrorBodyIsGeneric(t *testing.T) {
+	_, e, db := newTestServer(t)
+	repo := store.NewNodeRepo(db)
+	n, err := repo.Create(context.Background(), &store.Node{
+		ParentID: 0, Name: "broken.cbz", Path: "/nonexistent/path/broken.cbz",
+		Type: store.NodeComic, PageCount: 1,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/comics/"+itoa(n.ID)+"/pages/0", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code < 500 {
+		t.Fatalf("expected a 5xx, got %d (body=%s)", rec.Code, rec.Body.String())
+	}
+	if strings.Contains(rec.Body.String(), ".cbz") || strings.Contains(rec.Body.String(), "/nonexistent") {
+		t.Fatalf("5xx body leaked a path: %s", rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), "internal error") {
+		t.Fatalf("5xx body = %s, want generic message", rec.Body.String())
+	}
+}
+
 func TestSidebarOnBrowseNotReader(t *testing.T) {
 	s, e, db := newTestServer(t)
 	n := seedComic(t, db, s.dataDir)

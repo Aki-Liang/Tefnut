@@ -59,6 +59,10 @@ func main() {
 	e.HideBanner = true
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
+	e.Use(middleware.Gzip())
+	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
+		ContentTypeNosniff: "nosniff",
+	}))
 	srv.Register(e)
 
 	log.Printf("tefnut listening on %s, library=%s", cfg.Server.Addr, cfg.Library.RootPath)
