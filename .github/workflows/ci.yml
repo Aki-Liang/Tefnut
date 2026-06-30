@@ -16,6 +16,8 @@ jobs:
         run: go vet ./...
       - name: test
         run: go test ./...
+      - name: js-test
+        run: node --test internal/server/web/static/js/
       - name: govulncheck
         run: |
           go install golang.org/x/vuln/cmd/govulncheck@latest
