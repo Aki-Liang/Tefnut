@@ -87,7 +87,7 @@ scanNowBtn.addEventListener('click', () => {
   scanNowBtn.disabled = true;
   scanNowStatus.textContent = '触发中…';
   fetch('/api/scan', { method: 'POST' })
-    .then((r) => r.json())
+    .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
     .then((j) => {
       scanNowStatus.textContent = (j.data && j.data.triggered)
         ? '已触发扫描，后台进行中'
