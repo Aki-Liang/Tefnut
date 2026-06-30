@@ -61,6 +61,7 @@ func (s *Server) Register(e *echo.Echo) {
 	e.GET("/", s.pageBrowse)
 	e.GET("/folder/:id", s.pageBrowse)
 	e.GET("/read/:id", s.pageReader)
+	e.GET("/comic/:id", s.pageComicDetail)
 	e.GET("/tags", s.pageTags)
 	e.GET("/settings", s.pageSettings)
 

@@ -679,6 +679,46 @@ func TestApiAddPathRejectsOutsideRoot(t *testing.T) {
 	}
 }
 
+func TestPageComicDetailRenders(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	tr := store.NewTagRepo(db)
+	tag, err := tr.Upsert(context.Background(), "action")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := tr.AddToNode(context.Background(), n.ID, tag.ID); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/comic/"+itoa(n.ID), nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, want := range []string{
+		n.Name,
+		`src="/api/comics/` + itoa(n.ID) + `/cover"`,
+		`href="/read/` + itoa(n.ID) + `"`,
+		"action",
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("detail body missing %q", want)
+		}
+	}
+}
+
+func TestPageComicDetailNotFound(t *testing.T) {
+	_, e, _ := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/comic/99999", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status=%d, want 404", rec.Code)
+	}
+}
+
 func TestSidebarOnBrowseNotReader(t *testing.T) {
 	s, e, db := newTestServer(t)
 	n := seedComic(t, db, s.dataDir)

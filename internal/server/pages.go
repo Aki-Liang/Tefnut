@@ -47,6 +47,16 @@ type readerData struct {
 	DisplayMode      string
 }
 
+type comicData struct {
+	ID        int64
+	Name      string
+	Author    string
+	Rating    int
+	PageCount int
+	Tags      []*store.Tag
+	Ratings   []int
+}
+
 // render clones the base layout template set, parses the given page template
 // (so its {{define}} blocks override the layout defaults), executes the layout,
 // and writes the result.
@@ -125,6 +135,23 @@ func (s *Server) breadcrumb(ctx context.Context, parent int64) []crumb {
 		id = n.ParentID
 	}
 	return crumbs
+}
+
+func (s *Server) pageComicDetail(c echo.Context) error {
+	ctx := c.Request().Context()
+	id, err := parseID(c, "id")
+	if err != nil {
+		return fail(c, http.StatusBadRequest, err)
+	}
+	n, err := s.nodes.Get(ctx, id)
+	if err != nil {
+		return fail(c, http.StatusNotFound, err)
+	}
+	tags, _ := s.tags.ListForNode(ctx, id)
+	return render(c, "comic.html", comicData{
+		ID: n.ID, Name: n.Name, Author: n.Author, Rating: n.Rating,
+		PageCount: n.PageCount, Tags: tags, Ratings: ratingChoices,
+	})
 }
 
 func (s *Server) pageSettings(c echo.Context) error {

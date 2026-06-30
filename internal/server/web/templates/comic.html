@@ -1,0 +1,24 @@
+{{define "title"}}{{.Name}} · Tefnut{{end}}
+{{define "content"}}
+<a class="crumbs back-link" href="/" id="backlink">← 返回</a>
+<section class="detail" data-id="{{.ID}}" data-rating="{{.Rating}}">
+  <div class="detail-cover">
+    <img src="/api/comics/{{.ID}}/cover" alt="{{.Name}}">
+  </div>
+  <div class="detail-meta">
+    <h1 class="detail-title">{{.Name}}</h1>
+    <label class="detail-row">作者 <input id="d-author" value="{{.Author}}"></label>
+    <div class="detail-row">评分 <span id="d-stars" class="stars-edit"></span></div>
+    <div class="detail-row tags-row">标签
+      <span id="d-tags" class="tags">{{range .Tags}}<span class="tag" data-id="{{.ID}}">{{.Name}} <button class="del" type="button" aria-label="删除">×</button></span>{{end}}</span>
+    </div>
+    <form id="d-addtag" class="detail-row">
+      <input id="d-newtag" list="d-taglist" placeholder="添加标签…" autocomplete="off">
+      <datalist id="d-taglist"></datalist>
+      <button type="submit">+</button>
+    </form>
+    <a class="read-btn" href="/read/{{.ID}}">阅 读</a>
+  </div>
+</section>
+{{end}}
+{{define "scripts"}}<script src="/static/js/comic.js"></script>{{end}}
