@@ -337,6 +337,14 @@ document.getElementById('stripToggle').onclick = () => {
   measureStage(); // the strip changing height resizes the stage; keep fit=height accurate
 };
 
+// ---- back: return to the folder you came from (preserves its scroll/filters);
+// fall back to the href (root) only when opened directly, not from in-app nav ----
+document.getElementById('backlink').addEventListener('click', (e) => {
+  let sameOrigin = false;
+  try { sameOrigin = !!document.referrer && new URL(document.referrer).origin === location.origin; } catch (_) {}
+  if (sameOrigin && history.length > 1) { e.preventDefault(); history.back(); }
+});
+
 // ---- init ----
 applyDirLabel();
 applyStepLabel();
