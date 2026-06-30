@@ -741,3 +741,35 @@ func TestSidebarOnBrowseNotReader(t *testing.T) {
 		t.Fatal("reader should have a visible 下一页 button")
 	}
 }
+
+func TestBrowseCardLinksToComicDetail(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	body := rec.Body.String()
+	if !strings.Contains(body, `href="/comic/`+itoa(n.ID)+`"`) {
+		t.Fatalf("comic card should link to /comic/<id>; body=%s", body)
+	}
+	if strings.Contains(body, `href="/read/`+itoa(n.ID)+`"`) {
+		t.Fatalf("comic card should NOT link straight to /read/<id>")
+	}
+}
+
+func TestReaderHasNoMetadataControls(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	req := httptest.NewRequest(http.MethodGet, "/read/"+itoa(n.ID), nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	body := rec.Body.String()
+	for _, gone := range []string{`id="addtag"`, `id="rating"`, `id="author"`} {
+		if strings.Contains(body, gone) {
+			t.Fatalf("reader bar should no longer contain %q", gone)
+		}
+	}
+	if !strings.Contains(body, `id="modetoggle"`) {
+		t.Fatalf("reader should still have reading controls (modetoggle)")
+	}
+}
