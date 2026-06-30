@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"sync"
 
@@ -13,6 +14,12 @@ import (
 	"Tefnut/internal/store"
 	"Tefnut/internal/thumb"
 )
+
+type buildTask struct {
+	node  *store.Node
+	size  int64
+	mtime int64
+}
 
 type Scanner struct {
 	repo       *store.NodeRepo
@@ -38,6 +45,8 @@ func (s *Scanner) cacheDir(id int64) string {
 func (s *Scanner) Scan(ctx context.Context) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+
+	var builds []buildTask
 
 	libs, err := s.paths.List(ctx)
 	if err != nil {
@@ -79,7 +88,7 @@ func (s *Scanner) Scan(ctx context.Context) error {
 			log.Printf("scanner: library path %s unavailable: %v", abs, err)
 			continue
 		}
-		if err := s.scanDir(ctx, abs, node.ID); err != nil {
+		if err := s.scanDir(ctx, abs, node.ID, &builds); err != nil {
 			log.Printf("scanner: scan library %s: %v", abs, err)
 		}
 	}
@@ -87,10 +96,11 @@ func (s *Scanner) Scan(ctx context.Context) error {
 	for _, n := range byPath {
 		s.removeNode(ctx, n)
 	}
+	s.runBuilds(ctx, builds)
 	return nil
 }
 
-func (s *Scanner) scanDir(ctx context.Context, dir string, parentID int64) error {
+func (s *Scanner) scanDir(ctx context.Context, dir string, parentID int64, builds *[]buildTask) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return fmt.Errorf("scanner: read dir %s: %w", dir, err)
@@ -136,15 +146,15 @@ func (s *Scanner) scanDir(ctx context.Context, dir string, parentID int64) error
 		}
 
 		if isDir {
-			if err := s.scanDir(ctx, p, node.ID); err != nil {
+			if err := s.scanDir(ctx, p, node.ID, builds); err != nil {
 				log.Printf("scanner: recurse %s: %v", p, err)
 			}
 			continue
 		}
 
-		// Comic: (re)build cover + page count if new or changed.
+		// Comic: enqueue cover build if new or changed.
 		if !seen || node.Size != info.Size() || node.MTime != info.ModTime().Unix() {
-			s.buildComic(ctx, node, info.Size(), info.ModTime().Unix())
+			*builds = append(*builds, buildTask{node: node, size: info.Size(), mtime: info.ModTime().Unix()})
 		}
 	}
 
@@ -153,6 +163,32 @@ func (s *Scanner) scanDir(ctx context.Context, dir string, parentID int64) error
 		s.removeNode(ctx, n)
 	}
 	return nil
+}
+
+func (s *Scanner) runBuilds(ctx context.Context, tasks []buildTask) {
+	if len(tasks) == 0 {
+		return
+	}
+	workers := runtime.GOMAXPROCS(0)
+	if workers > len(tasks) {
+		workers = len(tasks)
+	}
+	ch := make(chan buildTask)
+	var wg sync.WaitGroup
+	for i := 0; i < workers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for t := range ch {
+				s.buildComic(ctx, t.node, t.size, t.mtime)
+			}
+		}()
+	}
+	for _, t := range tasks {
+		ch <- t
+	}
+	close(ch)
+	wg.Wait()
 }
 
 func (s *Scanner) buildComic(ctx context.Context, node *store.Node, size, mtime int64) {

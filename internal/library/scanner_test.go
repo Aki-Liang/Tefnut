@@ -252,6 +252,52 @@ func pageCountOf(t *testing.T, repo *store.NodeRepo, comicPath string) int {
 	return 0
 }
 
+// rootID finds the root node in repo whose Path matches the given abs path and returns its ID.
+func rootID(t *testing.T, repo *store.NodeRepo, path string) int64 {
+	t.Helper()
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		t.Fatalf("rootID: abs(%s): %v", path, err)
+	}
+	roots, err := repo.ListChildren(context.Background(), 0, -1, 0)
+	if err != nil {
+		t.Fatalf("rootID: list roots: %v", err)
+	}
+	for _, r := range roots {
+		if r.Path == absPath {
+			return r.ID
+		}
+	}
+	t.Fatalf("rootID: no root node found for path %s", absPath)
+	return 0
+}
+
+func TestScanBuildsAllCoversConcurrently(t *testing.T) {
+	ctx := context.Background()
+	sc, repo, paths, _ := newTestScanner(t)
+	libDir := t.TempDir()
+	paths.Add(ctx, "lib", libDir)
+	const n = 12
+	for i := 0; i < n; i++ {
+		writeTestZip(t, filepath.Join(libDir, "c"+itoa(int64(i))+".cbz"), []string{"01.jpg", "02.jpg"})
+	}
+	if err := sc.Scan(ctx); err != nil {
+		t.Fatal(err)
+	}
+	comics, err := repo.ListChildren(ctx, rootID(t, repo, libDir), -1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(comics) != n {
+		t.Fatalf("comics = %d, want %d", len(comics), n)
+	}
+	for _, cm := range comics {
+		if cm.PageCount != 2 || cm.CoverStatus != store.CoverReady {
+			t.Fatalf("comic %s: pages=%d cover=%d", cm.Name, cm.PageCount, cm.CoverStatus)
+		}
+	}
+}
+
 func TestRescanReplacedArchiveUpdatesPageCount(t *testing.T) {
 	ctx := context.Background()
 	sc, repo, paths, _ := newTestScanner(t)
