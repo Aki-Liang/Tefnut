@@ -173,6 +173,9 @@ main.with-sidebar { margin-left: 188px; padding: 26px 28px; transition: margin-l
   border-radius: 6px; padding: 18px; margin-bottom: 18px;
   max-width: 760px;
 }
+/* card header row: title left, primary action (e.g. 保存) pinned right */
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.card-head h2 { margin: 0; }
 .card-box input, .card-box select, .card-box button {
   background: var(--ink); color: var(--paper);
   border: 2px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 13px;
