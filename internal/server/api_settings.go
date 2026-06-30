@@ -130,6 +130,11 @@ func (s *Server) apiAddPath(c echo.Context) error {
 	return ok(c, lp)
 }
 
+func (s *Server) apiScanNow(c echo.Context) error {
+	started := s.reconf.ScanNow()
+	return ok(c, map[string]any{"triggered": started})
+}
+
 func (s *Server) apiDeletePath(c echo.Context) error {
 	ctx := c.Request().Context()
 	id, err := strconv.ParseInt(c.Param("id"), 10, 64)

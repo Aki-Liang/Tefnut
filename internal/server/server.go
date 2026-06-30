@@ -14,9 +14,10 @@ import (
 const archiveCacheSize = 8
 const decodeConcurrency = 4
 
-// Reconfigurer is satisfied by *scan.Manager via its Reconfigure method.
+// Reconfigurer is satisfied by *scan.Manager.
 type Reconfigurer interface {
 	Reconfigure(ctx context.Context) error
+	ScanNow() bool
 }
 
 type Server struct {
@@ -83,5 +84,7 @@ func (s *Server) Register(e *echo.Echo) {
 	api.PUT("/settings", s.apiUpdateSettings)
 	api.POST("/settings/paths", s.apiAddPath)
 	api.DELETE("/settings/paths/:id", s.apiDeletePath)
+
+	api.POST("/scan", s.apiScanNow)
 
 }

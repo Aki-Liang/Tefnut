@@ -79,3 +79,20 @@ document.getElementById('scanform').addEventListener('submit', (e) => {
     alert('已保存，扫描设置已生效');
   }).catch(() => alert('保存失败'));
 });
+
+// immediate scan
+const scanNowBtn = document.getElementById('scan-now');
+const scanNowStatus = document.getElementById('scan-now-status');
+scanNowBtn.addEventListener('click', () => {
+  scanNowBtn.disabled = true;
+  scanNowStatus.textContent = '触发中…';
+  fetch('/api/scan', { method: 'POST' })
+    .then((r) => r.json())
+    .then((j) => {
+      scanNowStatus.textContent = (j.data && j.data.triggered)
+        ? '已触发扫描，后台进行中'
+        : '扫描进行中，请稍候';
+    })
+    .catch(() => { scanNowStatus.textContent = '触发失败'; })
+    .finally(() => { scanNowBtn.disabled = false; });
+});

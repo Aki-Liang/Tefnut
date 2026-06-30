@@ -18,9 +18,13 @@ import (
 	"Tefnut/internal/store"
 )
 
-type stubReconf struct{ calls int }
+type stubReconf struct {
+	calls int
+	scans int
+}
 
 func (s *stubReconf) Reconfigure(ctx context.Context) error { s.calls++; return nil }
+func (s *stubReconf) ScanNow() bool                         { s.scans++; return true }
 
 func newTestServer(t *testing.T) (*Server, *echo.Echo, *store.DB) {
 	t.Helper()
@@ -457,6 +461,19 @@ func TestSettingsUpdateTriggersReconfigure(t *testing.T) {
 	}
 	if rc.calls != 1 {
 		t.Fatalf("expected Reconfigure called once, got %d", rc.calls)
+	}
+}
+
+func TestApiScanNow(t *testing.T) {
+	_, e, _ := newTestServer(t)
+	req := httptest.NewRequest(http.MethodPost, "/api/scan", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"triggered":true`) {
+		t.Fatalf("body=%s, want triggered:true", rec.Body.String())
 	}
 }
 
