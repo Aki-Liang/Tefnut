@@ -21,6 +21,13 @@
         <option value="continuous">连续</option>
         <option value="spread">双页</option>
       </select>
+      <button class="pagebtn" id="fittoggle" title="适配方式">适配: <span id="fitlabel">高</span></button>
+      <span class="zoomgroup">
+        <button class="pagebtn" id="zoomout" title="缩小" aria-label="缩小">−</button>
+        <input id="zoominput" class="zoominput" inputmode="numeric" title="缩放百分比" value="100" aria-label="缩放百分比">
+        <span class="zoompct">%</span>
+        <button class="pagebtn" id="zoomin" title="放大" aria-label="放大">+</button>
+      </span>
       <button class="pagebtn" id="stepbtn" title="翻页步进">步进: <span id="steplabel">两页</span></button>
   </div>
   <div id="thumbstrip" class="thumbstrip">

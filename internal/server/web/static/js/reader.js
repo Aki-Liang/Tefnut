@@ -38,6 +38,21 @@ function setZoom(z) { zoom = clampZoom(z); applyView(); }
 function setFit(f) { fit = normFit(f); zoom = 1; applyView(); }
 window.addEventListener('resize', measureStage);
 
+// ---- view controls: fit toggle, zoom buttons, percent input, Ctrl+wheel ----
+document.getElementById('zoomin').onclick = () => setZoom(stepZoom(zoom, 1));
+document.getElementById('zoomout').onclick = () => setZoom(stepZoom(zoom, -1));
+document.getElementById('fittoggle').onclick = () => setFit(fit === 'width' ? 'height' : 'width');
+const zoomInput = document.getElementById('zoominput');
+zoomInput.addEventListener('change', () => {
+  setZoom(parsePercent(zoomInput.value, zoom));
+  zoomInput.value = String(Math.round(zoom * 100)); // force-normalize the field on explicit commit
+});
+stage.addEventListener('wheel', (e) => {
+  if (!e.ctrlKey) return;        // only Ctrl+wheel zooms; plain wheel scrolls
+  e.preventDefault();            // suppress the browser's own ctrl-wheel zoom over the reader
+  setZoom(stepZoom(zoom, e.deltaY < 0 ? 1 : -1));
+}, { passive: false });
+
 let contLazyObs = null, contPageObs = null;
 
 function pageURL(n) { return `/api/comics/${id}/pages/${n}`; }
@@ -180,7 +195,14 @@ document.getElementById('prevbtn').onclick = back;
 
 // ---- keyboard ----
 document.addEventListener('keydown', (e) => {
-  if (mode === 'continuous') return; // native scroll
+  const t = e.target;
+  const typing = t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA');
+  if (!typing) {
+    if (e.key === '+' || e.key === '=') { setZoom(stepZoom(zoom, 1)); return; }
+    if (e.key === '-') { setZoom(stepZoom(zoom, -1)); return; }
+    if (e.key === '0') { setZoom(1); return; }
+  }
+  if (mode === 'continuous') return; // native scroll for arrows
   if (e.key === 'ArrowRight') { dir === 'rtl' ? back() : advance(); }
   if (e.key === 'ArrowLeft') { dir === 'rtl' ? advance() : back(); }
 });

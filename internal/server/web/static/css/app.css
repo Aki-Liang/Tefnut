@@ -311,3 +311,6 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
 #reader[data-fit="width"]  .spread img { width: calc(50% * var(--page-zoom)); height: auto; max-width: none; max-height: none; }
 #modetoggle { font-family: var(--font-mono); }
 #stepbtn { font-family: var(--font-mono); }
+.zoomgroup { display: inline-flex; align-items: center; gap: 4px; }
+.zoominput { width: 52px; text-align: right; background: var(--ink); color: var(--paper); border: 2px solid var(--line); border-radius: 6px; padding: 5px 6px; font-family: var(--font-mono); font-size: 13px; }
+.zoompct { color: var(--muted); font-family: var(--font-mono); font-size: 13px; }
