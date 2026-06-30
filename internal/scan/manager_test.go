@@ -65,7 +65,7 @@ func TestCronSpec(t *testing.T) {
 func TestStartRunsInitialScan(t *testing.T) {
 	settings, paths := newRepos(t)
 	fs := &fakeScanner{}
-	m := New(fs, settings, paths)
+	m := New(fs, settings, paths, t.TempDir(), 0)
 	if err := m.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestStartRunsInitialScan(t *testing.T) {
 func TestReconfigureTriggersScan(t *testing.T) {
 	settings, paths := newRepos(t)
 	fs := &fakeScanner{ch: make(chan struct{}, 4)}
-	m := New(fs, settings, paths)
+	m := New(fs, settings, paths, t.TempDir(), 0)
 	m.Start(context.Background())
 	defer m.Stop()
 	<-fs.ch // initial
@@ -96,7 +96,7 @@ func TestReconfigureTriggersScan(t *testing.T) {
 func TestReconfigureUsesBaseContextNotRequestContext(t *testing.T) {
 	settings, paths := newRepos(t)
 	fs := &fakeScanner{ch: make(chan struct{}, 4)}
-	m := New(fs, settings, paths)
+	m := New(fs, settings, paths, t.TempDir(), 0)
 	m.Start(context.Background())
 	defer m.Stop()
 	<-fs.ch // initial scan

@@ -72,7 +72,7 @@ func (m *Manager) startWatchLocked(ctx context.Context) error {
 	}
 
 	deb := newDebouncer(m.debounce, func() {
-		if err := m.scanner.Scan(ctx); err != nil {
+		if err := m.runScan(ctx); err != nil {
 			log.Printf("scan: watch-triggered scan: %v", err)
 		}
 	})

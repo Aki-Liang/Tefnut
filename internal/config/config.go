@@ -26,12 +26,17 @@ type Thumbnail struct {
 	PageWidth int `yaml:"pageWidth"`
 }
 
+type Cache struct {
+	MaxBytes int64 `yaml:"maxBytes"`
+}
+
 type Config struct {
 	Library   Library   `yaml:"library"`
 	DataDir   string    `yaml:"dataDir"`
 	Server    Server    `yaml:"server"`
 	Scan      Scan      `yaml:"scan"`
 	Thumbnail Thumbnail `yaml:"thumbnail"`
+	Cache     Cache     `yaml:"cache"`
 }
 
 func defaults() *Config {
@@ -40,6 +45,7 @@ func defaults() *Config {
 		Server:    Server{Addr: ":8086"},
 		Scan:      Scan{Interval: "2m"},
 		Thumbnail: Thumbnail{Width: 400, PageWidth: 120},
+		Cache:     Cache{MaxBytes: 2 << 30},
 	}
 }
 

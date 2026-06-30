@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/robfig/cron/v3"
 
+	"Tefnut/internal/cache"
 	"Tefnut/internal/store"
 )
 
@@ -20,9 +22,11 @@ type Scanner interface {
 }
 
 type Manager struct {
-	scanner  Scanner
-	settings *store.SettingsRepo
-	paths    *store.LibraryPathRepo
+	scanner       Scanner
+	settings      *store.SettingsRepo
+	paths         *store.LibraryPathRepo
+	dataDir       string
+	cacheMaxBytes int64
 
 	mu       sync.Mutex
 	baseCtx  context.Context
@@ -31,8 +35,27 @@ type Manager struct {
 	debounce time.Duration
 }
 
-func New(sc Scanner, settings *store.SettingsRepo, paths *store.LibraryPathRepo) *Manager {
-	return &Manager{scanner: sc, settings: settings, paths: paths, debounce: 3 * time.Second}
+func New(sc Scanner, settings *store.SettingsRepo, paths *store.LibraryPathRepo, dataDir string, cacheMaxBytes int64) *Manager {
+	return &Manager{
+		scanner:       sc,
+		settings:      settings,
+		paths:         paths,
+		dataDir:       dataDir,
+		cacheMaxBytes: cacheMaxBytes,
+		debounce:      3 * time.Second,
+	}
+}
+
+func (m *Manager) runScan(ctx context.Context) error {
+	if err := m.scanner.Scan(ctx); err != nil {
+		return err
+	}
+	if n, err := cache.Enforce(filepath.Join(m.dataDir, "cache"), m.cacheMaxBytes); err != nil {
+		log.Printf("scan: enforce cache budget: %v", err)
+	} else if n > 0 {
+		log.Printf("scan: evicted %d cached extract dir(s)", n)
+	}
+	return nil
 }
 
 // Start runs one blocking scan, then starts the active mode.
@@ -41,7 +64,7 @@ func (m *Manager) Start(ctx context.Context) error {
 	m.baseCtx = ctx
 	m.mu.Unlock()
 
-	if err := m.scanner.Scan(ctx); err != nil {
+	if err := m.runScan(ctx); err != nil {
 		log.Printf("scan: initial scan: %v", err)
 	}
 	return m.applyMode()
@@ -66,7 +89,7 @@ func (m *Manager) Reconfigure(ctx context.Context) error {
 	}
 	base := m.baseContext()
 	go func() {
-		if err := m.scanner.Scan(base); err != nil {
+		if err := m.runScan(base); err != nil {
 			log.Printf("scan: reconfigure rescan: %v", err)
 		}
 	}()
@@ -112,7 +135,7 @@ func (m *Manager) applyMode() error {
 		}
 		c := cron.New()
 		if _, err := c.AddFunc(spec, func() {
-			if err := m.scanner.Scan(base); err != nil {
+			if err := m.runScan(base); err != nil {
 				log.Printf("scan: scheduled scan: %v", err)
 			}
 		}); err != nil {
