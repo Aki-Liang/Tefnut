@@ -213,7 +213,21 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
   position: relative; display: flex; justify-content: center; align-items: center;
   flex: 1 1 auto; min-height: 0; overflow: hidden; background: var(--ink-2);
 }
-#page { max-height: 100%; max-width: 100%; box-shadow: 0 0 0 1px var(--line); }
+#reader { --page-zoom: 1; --stage-h: 100vh; }
+#page, .cpage, .spread img { box-shadow: 0 0 0 1px var(--line); display: block; object-fit: contain; }
+
+/* fit height: image height = stage height × zoom, width follows (no distortion) */
+#reader[data-fit="height"] #page,
+#reader[data-fit="height"] .cpage {
+  height: calc(var(--stage-h) * var(--page-zoom)); width: auto;
+  max-width: none; max-height: none;
+}
+/* fit width: image width = container width × zoom, height follows */
+#reader[data-fit="width"] #page,
+#reader[data-fit="width"] .cpage {
+  width: calc(100% * var(--page-zoom)); height: auto;
+  max-width: none; max-height: none;
+}
 
 .nav {
   position: absolute; top: 0; bottom: 0; width: 20%;
@@ -288,8 +302,8 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
 
 /* reader display modes */
 .spread { display: flex; gap: 2px; align-items: center; justify-content: center; height: 100%; width: 100%; }
-.spread img { max-height: 100%; max-width: 50%; object-fit: contain; box-shadow: 0 0 0 1px var(--line); }
-.continuous { height: 100%; width: 100%; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px 0; scrollbar-width: thin; }
-.continuous .cpage { width: min(100%, 760px); height: auto; min-height: 60vh; display: block; box-shadow: 0 0 0 1px var(--line); }
+.continuous { height: 100%; width: 100%; overflow: auto; display: flex; flex-direction: column; align-items: safe center; gap: 10px; padding: 10px 0; scrollbar-width: thin; }
+#reader[data-fit="height"] .spread img { height: calc(var(--stage-h) * var(--page-zoom)); width: auto; max-width: none; max-height: none; }
+#reader[data-fit="width"]  .spread img { width: calc(50% * var(--page-zoom)); height: auto; max-width: none; max-height: none; }
 #modetoggle { font-family: var(--font-mono); }
 #stepbtn { font-family: var(--font-mono); }
