@@ -196,6 +196,11 @@ func (s *Scanner) buildComic(ctx context.Context, node *store.Node, size, mtime 
 	if err := os.RemoveAll(s.cacheDir(node.ID)); err != nil {
 		log.Printf("scanner: evict extract cache %d: %v", node.ID, err)
 	}
+	// Drop stale page thumbs (keyed only on id:n) so they get regenerated.
+	pagesDir := filepath.Join(s.dataDir, "thumbs", "pages", strconv.FormatInt(node.ID, 10))
+	if err := os.RemoveAll(pagesDir); err != nil {
+		log.Printf("scanner: evict page thumbs %d: %v", node.ID, err)
+	}
 
 	rc, _, count, err := archive.FirstImage(ctx, node.Path, s.cacheDir(node.ID))
 	if err != nil {
@@ -248,6 +253,10 @@ func (s *Scanner) removeNode(ctx context.Context, n *store.Node) {
 	}
 	if err := os.RemoveAll(s.cacheDir(n.ID)); err != nil {
 		log.Printf("scanner: remove extract cache %d: %v", n.ID, err)
+	}
+	pagesDir := filepath.Join(s.dataDir, "thumbs", "pages", strconv.FormatInt(n.ID, 10))
+	if err := os.RemoveAll(pagesDir); err != nil {
+		log.Printf("scanner: remove page thumbs %d: %v", n.ID, err)
 	}
 	if err := s.repo.Delete(ctx, n.ID); err != nil {
 		log.Printf("scanner: delete node %d: %v", n.ID, err)

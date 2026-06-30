@@ -325,3 +325,45 @@ func TestRescanReplacedArchiveUpdatesPageCount(t *testing.T) {
 		t.Fatalf("page count after replace = %d, want 3", got)
 	}
 }
+
+func TestRescanInvalidatesStalePageThumbs(t *testing.T) {
+	ctx := context.Background()
+	sc, repo, paths, data := newTestScanner(t)
+	libDir := t.TempDir()
+	if _, err := paths.Add(ctx, "lib", libDir); err != nil {
+		t.Fatal(err)
+	}
+	comic := filepath.Join(libDir, "c.cbz")
+	writeTestZip(t, comic, []string{"01.png", "02.png"})
+	if err := sc.Scan(ctx); err != nil {
+		t.Fatal(err)
+	}
+	comics, err := repo.ListChildren(ctx, rootID(t, repo, libDir), -1, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(comics) != 1 {
+		t.Fatalf("expected 1 comic, got %d", len(comics))
+	}
+	id := comics[0].ID
+
+	// Plant a stale page thumbnail under <data>/thumbs/pages/<id>/0.jpg.
+	pagesDir := filepath.Join(data, "thumbs", "pages", strconvFormat(id))
+	if err := os.MkdirAll(pagesDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	stale := filepath.Join(pagesDir, "0.jpg")
+	if err := os.WriteFile(stale, []byte("stale"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Replace the archive (size change → buildComic re-runs) and rescan.
+	writeTestZip(t, comic, []string{"01.png", "02.png", "03.png"})
+	if err := sc.Scan(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		t.Fatalf("stale page thumb should be removed after rebuild, stat err = %v", err)
+	}
+}

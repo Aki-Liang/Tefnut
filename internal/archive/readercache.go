@@ -79,6 +79,17 @@ func (c *ReaderCache) releaser(e *cacheEntry) func() {
 	}
 }
 
+// Drop evicts the entry for key if present so the next Acquire re-opens it.
+// Safe with readers in flight: the entry is marked evicted and closed by its
+// last releaser, never mid-stream.
+func (c *ReaderCache) Drop(key string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if e, ok := c.entries[key]; ok {
+		c.dropLocked(e)
+	}
+}
+
 // dropLocked removes e from the map/lru and marks it evicted; it is closed now
 // if idle, else closed by the last releaser.
 func (c *ReaderCache) dropLocked(e *cacheEntry) {

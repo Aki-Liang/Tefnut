@@ -5,6 +5,7 @@ import (
 	"flag"
 	"log"
 	"path/filepath"
+	"strings"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -59,7 +60,15 @@ func main() {
 	e.HideBanner = true
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(middleware.Gzip())
+	// Gzip HTML/JSON/JS/CSS but skip already-compressed image bodies on the
+	// hottest endpoints (page, page-thumb, cover) — no savings, wasted CPU, and
+	// it would buffer streamed pages.
+	e.Use(middleware.GzipWithConfig(middleware.GzipConfig{
+		Skipper: func(c echo.Context) bool {
+			p := c.Path() // registered route template
+			return strings.Contains(p, "/pages/") || strings.HasSuffix(p, "/cover")
+		},
+	}))
 	e.Use(middleware.SecureWithConfig(middleware.SecureConfig{
 		ContentTypeNosniff: "nosniff",
 	}))

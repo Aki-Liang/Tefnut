@@ -140,6 +140,9 @@ func (s *Server) openPage(ctx context.Context, n *store.Node, pageNum int) (io.R
 	}
 	rc, err := r.Open(names[pageNum])
 	if err != nil {
+		// The cached reader is stale (e.g. its extract dir was swept out from
+		// under it): drop it so the next Acquire re-extracts and self-heals.
+		s.readers.Drop(key)
 		release()
 		return nil, "", nil, err
 	}
@@ -181,6 +184,15 @@ func (s *Server) apiPage(c echo.Context) error {
 	return c.Stream(http.StatusOK, contentType(name), rc)
 }
 
+// generateThumb runs thumb generation under the decode semaphore, releasing the
+// slot even if the decoder panics (the deferred release runs during unwinding).
+// The slot is held only across the decode, not the later disk write or send.
+func (s *Server) generateThumb(r io.Reader) ([]byte, error) {
+	s.decodeSem <- struct{}{}
+	defer func() { <-s.decodeSem }()
+	return thumb.Generate(r, s.pageThumbWidth)
+}
+
 func (s *Server) apiPageThumb(c echo.Context) error {
 	ctx := c.Request().Context()
 	id, err := parseID(c, "id")
@@ -212,9 +224,7 @@ func (s *Server) apiPageThumb(c echo.Context) error {
 	}
 	defer release()
 	defer rc.Close()
-	s.decodeSem <- struct{}{}
-	data, err := thumb.Generate(rc, s.pageThumbWidth)
-	<-s.decodeSem
+	data, err := s.generateThumb(rc)
 	if err != nil {
 		return fail(c, http.StatusInternalServerError, err)
 	}
