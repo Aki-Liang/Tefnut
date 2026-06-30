@@ -276,7 +276,9 @@ func TestScanBuildsAllCoversConcurrently(t *testing.T) {
 	ctx := context.Background()
 	sc, repo, paths, _ := newTestScanner(t)
 	libDir := t.TempDir()
-	paths.Add(ctx, "lib", libDir)
+	if _, err := paths.Add(ctx, "lib", libDir); err != nil {
+		t.Fatal(err)
+	}
 	const n = 12
 	for i := 0; i < n; i++ {
 		writeTestZip(t, filepath.Join(libDir, "c"+itoa(int64(i))+".cbz"), []string{"01.jpg", "02.jpg"})
