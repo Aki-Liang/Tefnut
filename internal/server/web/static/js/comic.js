@@ -67,16 +67,28 @@ fetch('/api/tags').then((r) => r.json()).then((j) => { allTags = j.data || []; }
 function isAttached(t) { return !!tagsBox.querySelector(`.tag[data-id="${t.id}"]`); }
 function closeSuggest() { suggest.hidden = true; suggest.innerHTML = ''; sugItems = []; sugActive = -1; newtag.setAttribute('aria-expanded', 'false'); }
 function setActive(i) { sugActive = i; [...suggest.children].forEach((c, j) => c.classList.toggle('active', j === i)); }
+function step(dir) { // move active to the next non-disabled option, wrapping; no-op if none
+  for (let n = 0, i = sugActive; n < sugItems.length; n++) {
+    i = (i + dir + sugItems.length) % sugItems.length;
+    if (!sugItems[i].disabled) { setActive(i); return; }
+  }
+}
 function renderSuggest() {
   const q = newtag.value.trim().toLowerCase();
-  sugItems = !q ? [] : allTags.filter((t) => t.name.toLowerCase().includes(q) && !isAttached(t)).slice(0, 8);
+  // keep already-attached tags in the list (greyed + unpickable) instead of hiding them
+  sugItems = !q ? [] : allTags.filter((t) => t.name.toLowerCase().includes(q)).slice(0, 8)
+    .map((t) => ({ ...t, disabled: isAttached(t) }));
   if (!sugItems.length) { closeSuggest(); return; }
   suggest.innerHTML = '';
   sugItems.forEach((t, i) => {
     const o = document.createElement('div');
     o.className = 'dd-option'; o.setAttribute('role', 'option'); o.textContent = t.name;
-    o.addEventListener('mousemove', () => setActive(i));
-    o.addEventListener('mousedown', (e) => { e.preventDefault(); addTag(t.name); }); // mousedown beats input blur
+    if (t.disabled) {
+      o.setAttribute('aria-disabled', 'true'); o.title = '已添加'; // greyed via .dd-option[aria-disabled]; no listeners → unpickable
+    } else {
+      o.addEventListener('mousemove', () => setActive(i));
+      o.addEventListener('mousedown', (e) => { e.preventDefault(); addTag(t.name); }); // mousedown beats input blur
+    }
     suggest.appendChild(o);
   });
   sugActive = -1;
@@ -103,9 +115,9 @@ function addTag(name) {
 newtag.addEventListener('input', renderSuggest);
 newtag.addEventListener('keydown', (e) => {
   if (suggest.hidden) { if (e.key === 'Enter') { e.preventDefault(); addTag(newtag.value); } return; }
-  if (e.key === 'ArrowDown') { e.preventDefault(); setActive((sugActive + 1) % sugItems.length); }
-  else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((sugActive - 1 + sugItems.length) % sugItems.length); }
-  else if (e.key === 'Enter') { e.preventDefault(); addTag(sugActive >= 0 ? sugItems[sugActive].name : newtag.value); }
+  if (e.key === 'ArrowDown') { e.preventDefault(); step(1); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); step(-1); }
+  else if (e.key === 'Enter') { e.preventDefault(); addTag(sugActive >= 0 && !sugItems[sugActive].disabled ? sugItems[sugActive].name : newtag.value); }
   else if (e.key === 'Escape') { closeSuggest(); }
 });
 document.addEventListener('click', (e) => { if (!e.target.closest('.combobox')) closeSuggest(); });
