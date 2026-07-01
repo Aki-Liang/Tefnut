@@ -38,11 +38,8 @@ type browseData struct {
 type readerData struct {
 	ID               int64
 	Name             string
-	Author           string
-	Rating           int
 	PageCount        int
 	LastPage         int
-	Ratings          []int
 	ReadingDirection string
 	DisplayMode      string
 }
@@ -54,7 +51,6 @@ type comicData struct {
 	Rating    int
 	PageCount int
 	Tags      []*store.Tag
-	Ratings   []int
 }
 
 // render clones the base layout template set, parses the given page template
@@ -150,7 +146,7 @@ func (s *Server) pageComicDetail(c echo.Context) error {
 	tags, _ := s.tags.ListForNode(ctx, id)
 	return render(c, "comic.html", comicData{
 		ID: n.ID, Name: n.Name, Author: n.Author, Rating: n.Rating,
-		PageCount: n.PageCount, Tags: tags, Ratings: ratingChoices,
+		PageCount: n.PageCount, Tags: tags,
 	})
 }
 
@@ -192,11 +188,8 @@ func (s *Server) pageReader(c echo.Context) error {
 	return render(c, "reader.html", readerData{
 		ID:               n.ID,
 		Name:             n.Name,
-		Author:           n.Author,
-		Rating:           n.Rating,
 		PageCount:        n.PageCount,
 		LastPage:         last,
-		Ratings:          ratingChoices,
 		ReadingDirection: dir,
 		DisplayMode:      displayMode,
 	})

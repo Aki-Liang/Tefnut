@@ -264,7 +264,6 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
   background-repeat: no-repeat; background-position: right 9px center;
   padding-right: 28px; cursor: pointer;
 }
-.reader-bar .meta label { color: var(--muted); font-size: 13px; }
 #counter { font-family: var(--font-mono); font-size: 14px; color: var(--paper); min-width: 64px; text-align: center; }
 
 .pagebtn {
@@ -274,12 +273,6 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
 .pagebtn:hover { border-color: var(--seal); }
 #dirtoggle { margin-left: auto; font-family: var(--font-mono); }
 #dirlabel { color: var(--seal); font-weight: 700; }
-
-.tags .tag { display: inline-flex; gap: 4px; background: var(--panel-2); padding: 3px 9px; border-radius: 12px; margin: 2px; font-size: 12px; }
-.tags .tag button { background: none; border: 0; color: var(--seal); cursor: pointer; padding: 0; }
-#addtag { display: inline-flex; gap: 4px; }
-#addtag input { width: 110px; }
-#addtag button { background: var(--panel-2); color: var(--paper); border: 2px solid var(--line); border-radius: 6px; cursor: pointer; padding: 4px 10px; }
 
 /* the thumbnail strip is a contact sheet */
 .thumbstrip { background: var(--ink); flex: 0 0 auto; }
@@ -400,7 +393,6 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
 .star { background: none; border: none; cursor: pointer; font-size: 22px; line-height: 1; padding: 0 1px; color: var(--muted); }
 .star.on { color: var(--seal); }
 .tags-row .tags { display: inline-flex; flex-wrap: wrap; gap: 6px; }
-/* scoped to .detail so it doesn't collide with the older `.tags .tag` pill rule */
 .detail .tag { display: inline-flex; align-items: center; gap: 2px; background: var(--panel-2); color: var(--paper); border: 2px solid var(--line); border-radius: 6px; padding: 3px 8px; font-size: 12px; }
 .detail .tag .del { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13px; line-height: 1; }
 .detail .tag .del:hover { color: var(--seal); }
