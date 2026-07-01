@@ -1,0 +1,13 @@
+# Default in-container configuration.
+# Mount your library read-only at /comics and a persistent volume at /data.
+# To change these, mount your own file over /etc/tefnut/config.yaml.
+library:
+  rootPath: /comics
+dataDir: /data
+server:
+  addr: ":8086"
+thumbnail:
+  width: 400
+  pageWidth: 120
+cache:
+  maxBytes: 2147483648  # 2 GiB

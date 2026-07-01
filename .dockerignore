@@ -1,0 +1,13 @@
+.git
+.github
+.gitignore
+docs
+.superpowers
+README.md
+*.md
+data
+config.yaml
+*.db
+*.db-shm
+*.db-wal
+.DS_Store

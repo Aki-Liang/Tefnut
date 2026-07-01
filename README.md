@@ -33,3 +33,27 @@ scan (and immediately on restart).
 ```bash
 go build -o tefnut ./cmd/tefnut
 ```
+
+## Docker 部署
+
+镜像发布在 GHCR：`ghcr.io/aki-liang/tefnut`（支持 `linux/amd64` 和 `linux/arm64`）。
+
+1. 编辑 `docker-compose.yml`，把 `/path/to/your/comics` 改成你的漫画库目录，按需改 `TZ`。
+2. 启动：
+
+   ```bash
+   docker compose up -d
+   ```
+
+3. 浏览器打开 `http://<主机IP>:8086`。
+
+**卷与端口：**
+
+- `/comics`（只读）— 你的漫画库；Tefnut 从不写入。
+- `/data`（命名卷 `tefnut-data`）— SQLite 数据库、缩略图、页面缓存，容器重建后仍保留。容器以非-root 用户运行；用命名卷时权限自动就绪。若改用主机目录绑定挂载（如 `./data:/data`），需先把该目录的属主设成容器用户（否则数据库无法写入）。
+- `8086` — Web 端口。
+- `TZ` — 每日定时扫描按此时区触发（如 `Asia/Shanghai`）。
+
+**从源码构建**（不拉镜像）：注释 `docker-compose.yml` 里的 `image:`，取消注释 `build: .`，再 `docker compose up -d --build`。
+
+> 首次扫描包含大量大 PDF 时，会把每本的页面抽取到 `/data` 缓存（占磁盘、需要时间），这是抽取式缓存的预期行为。
