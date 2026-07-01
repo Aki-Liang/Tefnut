@@ -75,9 +75,10 @@ function step(dir) { // move active to the next non-disabled option, wrapping; n
 }
 function renderSuggest() {
   const q = newtag.value.trim().toLowerCase();
-  // keep already-attached tags in the list (greyed + unpickable) instead of hiding them
-  sugItems = !q ? [] : allTags.filter((t) => t.name.toLowerCase().includes(q)).slice(0, 8)
-    .map((t) => ({ ...t, disabled: isAttached(t) }));
+  // empty box lists all tags (click/focus to browse); typing filters by substring.
+  // already-attached tags stay in the list but greyed + unpickable.
+  const matches = q ? allTags.filter((t) => t.name.toLowerCase().includes(q)) : allTags;
+  sugItems = matches.slice(0, 8).map((t) => ({ ...t, disabled: isAttached(t) }));
   if (!sugItems.length) { closeSuggest(); return; }
   suggest.innerHTML = '';
   sugItems.forEach((t, i) => {
@@ -113,6 +114,8 @@ function addTag(name) {
     .catch(() => alert('添加标签失败'));
 }
 newtag.addEventListener('input', renderSuggest);
+newtag.addEventListener('focus', renderSuggest); // open the list on click/focus, even with an empty box
+newtag.addEventListener('click', renderSuggest); // reopen after Escape while still focused
 newtag.addEventListener('keydown', (e) => {
   if (suggest.hidden) { if (e.key === 'Enter') { e.preventDefault(); addTag(newtag.value); } return; }
   if (e.key === 'ArrowDown') { e.preventDefault(); step(1); }
