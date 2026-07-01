@@ -411,3 +411,6 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
   border: 2px solid var(--seal); font-size: 16px;
 }
 .read-btn:hover { background: var(--seal-dim); border-color: var(--seal-dim); }
+.combobox { position: relative; display: inline-block; }
+.combobox > input { background: var(--ink); color: var(--paper); border: 2px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 13px; min-width: 200px; }
+.combobox.open > input, .combobox > input:focus { border-color: var(--seal); }

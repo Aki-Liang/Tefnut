@@ -56,29 +56,56 @@ tagsBox.addEventListener('click', (e) => {
     .then((r) => { if (!r.ok) throw new Error(); chip.remove(); })
     .catch(() => alert('删除标签失败'));
 });
-document.getElementById('d-addtag').addEventListener('submit', (e) => {
-  e.preventDefault();
-  const input = document.getElementById('d-newtag');
-  const name = input.value.trim();
+// ---- themed tag combobox: filter existing tags, add on pick/Enter ----
+const newtag = document.getElementById('d-newtag');
+const suggest = document.getElementById('d-suggest');
+let allTags = [];      // [{id,name}] of existing tags
+let sugItems = [];     // current filtered list
+let sugActive = -1;
+fetch('/api/tags').then((r) => r.json()).then((j) => { allTags = j.data || []; }).catch(() => {});
+
+function isAttached(t) { return !!tagsBox.querySelector(`.tag[data-id="${t.id}"]`); }
+function closeSuggest() { suggest.hidden = true; suggest.innerHTML = ''; sugItems = []; sugActive = -1; newtag.setAttribute('aria-expanded', 'false'); }
+function setActive(i) { sugActive = i; [...suggest.children].forEach((c, j) => c.classList.toggle('active', j === i)); }
+function renderSuggest() {
+  const q = newtag.value.trim().toLowerCase();
+  sugItems = !q ? [] : allTags.filter((t) => t.name.toLowerCase().includes(q) && !isAttached(t)).slice(0, 8);
+  if (!sugItems.length) { closeSuggest(); return; }
+  suggest.innerHTML = '';
+  sugItems.forEach((t, i) => {
+    const o = document.createElement('div');
+    o.className = 'dd-option'; o.setAttribute('role', 'option'); o.textContent = t.name;
+    o.addEventListener('mousemove', () => setActive(i));
+    o.addEventListener('mousedown', (e) => { e.preventDefault(); addTag(t.name); }); // mousedown beats input blur
+    suggest.appendChild(o);
+  });
+  sugActive = -1;
+  suggest.hidden = false; newtag.setAttribute('aria-expanded', 'true');
+}
+function addTag(name) {
+  name = (name || '').trim();
   if (!name) return;
   fetch(`/api/comics/${id}/tags`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
   })
     .then((r) => (r.ok ? r.json() : Promise.reject()))
     .then((j) => {
       const t = j.data;
-      if (t && !tagsBox.querySelector(`.tag[data-id="${t.id}"]`)) tagsBox.appendChild(makeChip(t));
-      input.value = '';
+      if (t && !tagsBox.querySelector(`.tag[data-id="${t.id}"]`)) {
+        tagsBox.appendChild(makeChip(t));
+        if (!allTags.some((x) => x.id === t.id)) allTags.push(t);
+      }
+      newtag.value = ''; closeSuggest();
     })
     .catch(() => alert('添加标签失败'));
+}
+newtag.addEventListener('input', renderSuggest);
+newtag.addEventListener('keydown', (e) => {
+  if (suggest.hidden) { if (e.key === 'Enter') { e.preventDefault(); addTag(newtag.value); } return; }
+  if (e.key === 'ArrowDown') { e.preventDefault(); setActive((sugActive + 1) % sugItems.length); }
+  else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((sugActive - 1 + sugItems.length) % sugItems.length); }
+  else if (e.key === 'Enter') { e.preventDefault(); addTag(sugActive >= 0 ? sugItems[sugActive].name : newtag.value); }
+  else if (e.key === 'Escape') { closeSuggest(); }
 });
-
-// autocomplete existing tags
-fetch('/api/tags')
-  .then((r) => r.json())
-  .then((j) => {
-    const dl = document.getElementById('d-taglist');
-    (j.data || []).forEach((t) => { const o = document.createElement('option'); o.value = t.name; dl.appendChild(o); });
-  })
-  .catch(() => {});
+document.addEventListener('click', (e) => { if (!e.target.closest('.combobox')) closeSuggest(); });
+document.getElementById('d-addtag').addEventListener('submit', (e) => { e.preventDefault(); addTag(newtag.value); });

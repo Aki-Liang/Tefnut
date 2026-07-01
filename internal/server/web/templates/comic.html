@@ -13,8 +13,10 @@
       <span id="d-tags" class="tags">{{range .Tags}}<span class="tag" data-id="{{.ID}}">{{.Name}} <button class="del" type="button" aria-label="删除">×</button></span>{{end}}</span>
     </div>
     <form id="d-addtag" class="detail-row">
-      <input id="d-newtag" list="d-taglist" placeholder="添加标签…" autocomplete="off">
-      <datalist id="d-taglist"></datalist>
+      <span class="combobox">
+        <input id="d-newtag" placeholder="添加标签…" autocomplete="off" role="combobox" aria-expanded="false" aria-autocomplete="list">
+        <div id="d-suggest" class="dd-menu" role="listbox" hidden></div>
+      </span>
       <button type="submit">+</button>
     </form>
     <a class="read-btn" href="/read/{{.ID}}">阅 读</a>
