@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# rainmaker — one-command Tefnut launcher.
+# Generates ./docker-compose.yml in the current directory and starts Tefnut
+# from the published GHCR image.
+#   curl -fsSL https://raw.githubusercontent.com/Aki-Liang/Tefnut/main/rainmaker | bash
+#   curl -fsSL https://raw.githubusercontent.com/Aki-Liang/Tefnut/main/rainmaker | bash -s -- /path/to/your/comics
+set -euo pipefail
+
+IMAGE="ghcr.io/aki-liang/tefnut:latest"
+COMPOSE_FILE="docker-compose.yml"
+DEF_PORT="8086"
+
+err()  { printf '\033[31m%s\033[0m\n' "$*" >&2; }
+info() { printf '\033[36m%s\033[0m\n' "$*"; }
+
+# --- preflight ---
+command -v docker >/dev/null 2>&1 || { err "未找到 docker。请先安装 Docker：https://docs.docker.com/get-docker/"; exit 1; }
+docker compose version >/dev/null 2>&1 || { err "未找到 docker compose (v2)。请升级 Docker 到包含 Compose V2 的版本。"; exit 1; }
+
+# --- prompts read from /dev/tty so 'curl | bash' still works interactively ---
+TTY=""; [ -r /dev/tty ] && TTY=/dev/tty
+ask() { # $1 prompt  $2 default -> answer on stdout
+  local ans=""
+  if [ -n "$TTY" ]; then printf '%s' "$1" >"$TTY"; IFS= read -r ans <"$TTY" || true; fi
+  [ -z "$ans" ] && ans="$2"
+  printf '%s' "$ans"
+}
+expand_tilde() { case "$1" in "~"*) printf '%s' "${HOME}${1#\~}";; *) printf '%s' "$1";; esac; }
+
+# --- comic library path: arg $1, else prompt, else error ---
+COMICS_PATH="$(expand_tilde "${1:-}")"
+if [ -n "$COMICS_PATH" ]; then
+  [ -d "$COMICS_PATH" ] || { err "目录不存在: $COMICS_PATH"; exit 1; }
+elif [ -n "$TTY" ]; then
+  while :; do
+    COMICS_PATH="$(expand_tilde "$(ask '漫画库目录绝对路径: ' '')")"
+    [ -z "$COMICS_PATH" ] && { err "库路径必填。"; continue; }
+    [ -d "$COMICS_PATH" ] || { err "目录不存在: $COMICS_PATH"; continue; }
+    break
+  done
+else
+  err "没有可交互终端，请把漫画库目录作为参数传入："
+  err "  curl -fsSL .../rainmaker | bash -s -- /你的漫画目录"
+  exit 1
+fi
+
+# --- port + timezone ---
+detect_tz() {
+  local tz=""
+  [ -L /etc/localtime ] && tz="$(readlink /etc/localtime | sed 's#.*/zoneinfo/##')"
+  [ -n "$tz" ] && printf '%s' "$tz" || printf 'Asia/Shanghai'
+}
+while :; do
+  PORT="$(ask "Web 端口 [$DEF_PORT]: " "$DEF_PORT")"
+  if printf '%s' "$PORT" | grep -qE '^[0-9]+$' && [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ]; then break; fi
+  err "端口需为 1-65535 的数字。"
+  [ -z "$TTY" ] && exit 1
+done
+DTZ="$(detect_tz)"
+TZ_VAL="$(ask "时区 [$DTZ]: " "$DTZ")"
+
+# --- generate docker-compose.yml (values baked in) ---
+cat >"$COMPOSE_FILE" <<YAML
+services:
+  tefnut:
+    image: $IMAGE
+    container_name: tefnut
+    ports:
+      - "$PORT:8086"
+    volumes:
+      - $COMICS_PATH:/comics:ro
+      - tefnut-data:/data
+    environment:
+      - TZ=$TZ_VAL
+    restart: unless-stopped
+volumes:
+  tefnut-data:
+YAML
+info "已生成 $(pwd)/$COMPOSE_FILE"
+
+# --- launch (up -d auto-pulls the public image; no separate hard-failing pull) ---
+info "启动 Tefnut…"
+if ! docker compose up -d; then
+  err "启动失败。若是拉取镜像报错：确认能访问 ghcr.io；若你曾 'docker login ghcr.io' 且凭证已过期，执行 'docker logout ghcr.io' 后重试。"
+  exit 1
+fi
+
+# --- report ---
+if command -v curl >/dev/null 2>&1; then
+  for _ in $(seq 1 30); do curl -fsS -o /dev/null "http://127.0.0.1:$PORT/healthz" 2>/dev/null && break; sleep 1; done
+fi
+docker compose ps
+info "打开: http://localhost:$PORT"
+info "（首次启动会在后台扫描漫画库并生成封面，大库可能需要几分钟。）"
