@@ -29,6 +29,8 @@ func Open(ctx context.Context, archivePath, cacheDir string) (Reader, error) {
 		return openEPUB(archivePath)
 	case ".pdf":
 		return openPDF(ctx, archivePath, cacheDir)
+	case ".mobi":
+		return openMOBI(ctx, archivePath, cacheDir)
 	default:
 		return openExtracted(ctx, archivePath, cacheDir)
 	}
