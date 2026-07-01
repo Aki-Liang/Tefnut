@@ -1,0 +1,18 @@
+services:
+  tefnut:
+    image: ghcr.io/aki-liang/tefnut:latest
+    # To build from source instead of pulling the published image,
+    # comment out `image:` above and uncomment the next line:
+    # build: .
+    container_name: tefnut
+    ports:
+      - "8086:8086"
+    volumes:
+      - /path/to/your/comics:/comics:ro   # EDIT: your comic library (read-only)
+      - tefnut-data:/data                  # persistent DB, thumbnails, cache
+    environment:
+      - TZ=Asia/Shanghai                   # timezone for the daily-scan schedule
+    restart: unless-stopped
+
+volumes:
+  tefnut-data:
