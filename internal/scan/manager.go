@@ -109,7 +109,7 @@ func (m *Manager) ScanNow() bool {
 			m.mu.Unlock()
 		}()
 		if err := m.runScan(base); err != nil {
-			log.Printf("scan: manual scan: %v", err)
+			log.Printf("scan: background scan: %v", err)
 		}
 	}()
 	return true
@@ -169,11 +169,9 @@ func (m *Manager) applyMode() error {
 			return err
 		}
 		c := cron.New()
-		if _, err := c.AddFunc(spec, func() {
-			if err := m.runScan(base); err != nil {
-				log.Printf("scan: scheduled scan: %v", err)
-			}
-		}); err != nil {
+		// Route through ScanNow (guarded) so a scheduled scan never overlaps an
+		// in-flight one (e.g. the initial background scan on a very short interval).
+		if _, err := c.AddFunc(spec, func() { m.ScanNow() }); err != nil {
 			return fmt.Errorf("scan: schedule %q: %w", spec, err)
 		}
 		c.Start()
