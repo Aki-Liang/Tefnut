@@ -33,6 +33,8 @@ type browseData struct {
 	Tags       []*store.TagCount
 	Items      []*store.Node
 	Breadcrumb []crumb
+	ShowUp     bool  // inside a folder → offer a one-level-up button
+	UpID       int64 // parent of the current folder (0 = library root)
 }
 
 type readerData struct {
@@ -102,6 +104,14 @@ func (s *Server) pageBrowse(c echo.Context) error {
 		log.Printf("server: list tags for browse: %v", err)
 	}
 
+	crumbs := s.breadcrumb(ctx, parent)
+	// crumbs run root→current; the current folder is the last crumb, so its
+	// parent (the up-one-level target) is the second-to-last, else the root.
+	var upID int64
+	if n := len(crumbs); n >= 2 {
+		upID = crumbs[n-2].ID
+	}
+
 	data := browseData{
 		Title:      title,
 		ParentID:   parent,
@@ -111,7 +121,9 @@ func (s *Server) pageBrowse(c echo.Context) error {
 		Ratings:    ratingChoices,
 		Tags:       tags,
 		Items:      items,
-		Breadcrumb: s.breadcrumb(ctx, parent),
+		Breadcrumb: crumbs,
+		ShowUp:     parent != 0,
+		UpID:       upID,
 	}
 	return render(c, "browse.html", data)
 }

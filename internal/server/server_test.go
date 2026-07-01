@@ -371,6 +371,36 @@ func TestPageBrowseRenders(t *testing.T) {
 	}
 }
 
+func TestBrowseFolderHasUpButton(t *testing.T) {
+	_, e, db := newTestServer(t)
+	repo := store.NewNodeRepo(db)
+	dir, _ := repo.Create(context.Background(), &store.Node{Name: "MyDir", Path: "/x", Type: store.NodeDir})
+	child, _ := repo.Create(context.Background(), &store.Node{ParentID: dir.ID, Name: "Sub", Path: "/x/sub", Type: store.NodeDir})
+
+	// root (library home): no up button
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if strings.Contains(rec.Body.String(), "上一级") {
+		t.Fatalf("root must not show the up button: %s", rec.Body.String())
+	}
+
+	// top-level folder: up button links to the library root
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/folder/"+itoa(dir.ID), nil))
+	body := rec.Body.String()
+	if rec.Code != 200 || !strings.Contains(body, `class="up-btn" href="/"`) {
+		t.Fatalf("top-level folder up must link to root: status=%d body=%s", rec.Code, body)
+	}
+
+	// nested folder: up button links to the parent folder
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/folder/"+itoa(child.ID), nil))
+	body = rec.Body.String()
+	if !strings.Contains(body, `class="up-btn" href="/folder/`+itoa(dir.ID)+`"`) {
+		t.Fatalf("nested folder up must link to parent folder: %s", body)
+	}
+}
+
 func TestPageReaderRenders(t *testing.T) {
 	s, e, db := newTestServer(t)
 	n := seedComic(t, db, s.dataDir)

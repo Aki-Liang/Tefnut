@@ -14,7 +14,7 @@
     <button type="submit">筛选</button>
   </form>
 </section>
-{{if .Breadcrumb}}<nav class="crumbs">{{range .Breadcrumb}}<a href="/folder/{{.ID}}">{{.Name}}</a> / {{end}}</nav>{{end}}
+{{if .ShowUp}}<nav class="crumbs"><a class="up-btn" href="{{if .UpID}}/folder/{{.UpID}}{{else}}/{{end}}">↑ 上一级</a>{{range .Breadcrumb}}<a href="/folder/{{.ID}}">{{.Name}}</a> / {{end}}</nav>{{end}}
 <ul class="grid" id="grid">
   {{range .Items}}
   <li class="card {{if eq .Type 2}}dir{{end}}">

@@ -119,6 +119,8 @@ main.with-sidebar { margin-left: 188px; padding: 26px 28px; transition: margin-l
 .crumbs { margin: -8px 0 18px; font-size: 13px; color: var(--muted); font-family: var(--font-mono); }
 .crumbs a { color: var(--muted); text-decoration: none; }
 .crumbs a:hover { color: var(--seal); }
+.crumbs .up-btn { display: inline-block; margin-right: 12px; padding: 3px 10px; border: 2px solid var(--line); border-radius: 6px; background: var(--panel-2); color: var(--paper); font-family: var(--font-display); letter-spacing: 0.04em; }
+.crumbs .up-btn:hover { border-color: var(--seal); color: var(--seal); }
 
 .grid {
   list-style: none; padding: 0; margin: 0;
