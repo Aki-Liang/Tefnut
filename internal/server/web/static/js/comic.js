@@ -85,6 +85,7 @@ function renderSuggest() {
 function addTag(name) {
   name = (name || '').trim();
   if (!name) return;
+  closeSuggest(); // close the popup immediately on pick, before the round-trip
   fetch(`/api/comics/${id}/tags`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }),
   })
@@ -93,9 +94,9 @@ function addTag(name) {
       const t = j.data;
       if (t && !tagsBox.querySelector(`.tag[data-id="${t.id}"]`)) {
         tagsBox.appendChild(makeChip(t));
-        if (!allTags.some((x) => x.id === t.id)) allTags.push(t);
+        if (!allTags.some((x) => x.id === t.id)) allTags = [...allTags, t]; // immutable append
       }
-      newtag.value = ''; closeSuggest();
+      newtag.value = ''; // clear only on success, so a failed add keeps the text to retry
     })
     .catch(() => alert('添加标签失败'));
 }
