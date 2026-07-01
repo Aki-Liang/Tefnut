@@ -118,7 +118,7 @@ func (s *Scanner) scanDir(ctx context.Context, dir string, parentID int64, build
 	for _, e := range entries {
 		p := filepath.Join(dir, e.Name())
 		isDir := e.IsDir()
-		if !isDir && !archive.IsArchive(e.Name()) {
+		if !isDir && !archive.IsComic(e.Name()) {
 			continue
 		}
 		info, err := e.Info()

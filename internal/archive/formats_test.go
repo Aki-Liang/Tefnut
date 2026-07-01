@@ -37,3 +37,16 @@ func TestIsJunk(t *testing.T) {
 		t.Error("normal file is not junk")
 	}
 }
+
+func TestIsComic(t *testing.T) {
+	cases := map[string]bool{
+		"a.zip": true, "a.cbz": true, "a.rar": true, // existing archives
+		"a.epub": true, "A.EPUB": true, // new (case-insensitive)
+		"a.txt": false, "a.qkdownloading": false, "a.jpg": false, "dir": false,
+	}
+	for name, want := range cases {
+		if got := IsComic(name); got != want {
+			t.Errorf("IsComic(%q) = %v, want %v", name, got, want)
+		}
+	}
+}

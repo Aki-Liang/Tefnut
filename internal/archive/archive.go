@@ -25,6 +25,8 @@ func Open(ctx context.Context, archivePath, cacheDir string) (Reader, error) {
 	switch ext(archivePath) {
 	case ".zip", ".cbz":
 		return openZip(archivePath)
+	case ".epub":
+		return openEPUB(archivePath)
 	default:
 		return openExtracted(ctx, archivePath, cacheDir)
 	}
