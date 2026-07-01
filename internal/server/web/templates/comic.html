@@ -7,7 +7,7 @@
   </div>
   <div class="detail-meta">
     <h1 class="detail-title">{{.Name}}</h1>
-    <label class="detail-row">作者 <input id="d-author" value="{{.Author}}"></label>
+    <label class="detail-row">作者 <input id="d-author" value="{{.Author}}" autocomplete="off"></label>
     <div class="detail-row">评分 <span id="d-stars" class="stars-edit"></span></div>
     <div class="detail-row tags-row">标签
       <span id="d-tags" class="tags">{{range .Tags}}<span class="tag" data-id="{{.ID}}">{{.Name}} <button class="del" type="button" aria-label="删除">×</button></span>{{end}}</span>

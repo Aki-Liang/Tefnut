@@ -10,8 +10,8 @@
     {{end}}
   </ul>
   <form id="addpath" class="row">
-    <input id="np-path" placeholder="库目录绝对路径，如 /Users/me/comic">
-    <input id="np-name" placeholder="显示名（默认取末段）">
+    <input id="np-path" placeholder="库目录绝对路径，如 /Users/me/comic" autocomplete="off">
+    <input id="np-name" placeholder="显示名（默认取末段）" autocomplete="off">
     <button>添加</button>
   </form>
 </section>
@@ -25,7 +25,7 @@
     <div class="mode-row">
       <label><input type="radio" name="mode" value="interval"> 定时间隔</label>
       <span class="mode-args" data-mode="interval">
-        <input id="iv" placeholder="如 30m">
+        <input id="iv" placeholder="如 30m" autocomplete="off">
         <small class="hint">格式：如 30m、2h、90m；单位 s/m/h</small>
       </span>
     </div>
