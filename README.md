@@ -50,7 +50,7 @@ go build -o tefnut ./cmd/tefnut
 **卷与端口：**
 
 - `/comics`（只读）— 你的漫画库；Tefnut 从不写入。
-- `/data`（命名卷 `tefnut-data`）— SQLite 数据库、缩略图、页面缓存，容器重建后仍保留。
+- `/data`（命名卷 `tefnut-data`）— SQLite 数据库、缩略图、页面缓存，容器重建后仍保留。容器以非-root 用户运行；用命名卷时权限自动就绪。若改用主机目录绑定挂载（如 `./data:/data`），需先把该目录的属主设成容器用户（否则数据库无法写入）。
 - `8086` — Web 端口。
 - `TZ` — 每日定时扫描按此时区触发（如 `Asia/Shanghai`）。
 
