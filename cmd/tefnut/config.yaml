@@ -4,6 +4,6 @@ dataDir: "./data"
 server:
   addr: ":8086"
 scan:
-  interval: "2m"
+  interval: "1h"
 thumbnail:
   width: 400

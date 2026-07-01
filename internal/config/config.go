@@ -45,7 +45,7 @@ func defaults() *Config {
 	return &Config{
 		DataDir:   "./data",
 		Server:    Server{Addr: ":8086"},
-		Scan:      Scan{Interval: "2m"},
+		Scan:      Scan{Interval: "1h"},
 		Thumbnail: Thumbnail{Width: 400, PageWidth: 120},
 		Cache:     Cache{MaxBytes: 2 << 30},
 	}

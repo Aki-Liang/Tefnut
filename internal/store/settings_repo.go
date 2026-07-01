@@ -19,7 +19,7 @@ const (
 	keyScanDaily    = "scan_daily_time"
 
 	defScanMode     = "interval"
-	defScanInterval = "2m"
+	defScanInterval = "1h"
 	defScanDaily    = "03:00"
 )
 

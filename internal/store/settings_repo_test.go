@@ -11,7 +11,7 @@ func TestGetScanDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if s.Mode != "interval" || s.Interval != "2m" || s.DailyTime != "03:00" {
+	if s.Mode != "interval" || s.Interval != "1h" || s.DailyTime != "03:00" {
 		t.Fatalf("defaults wrong: %+v", s)
 	}
 }

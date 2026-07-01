@@ -1,0 +1,2 @@
+# Local runtime configuration (holds a user-specific library path)
+.env
