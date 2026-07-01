@@ -25,6 +25,12 @@ func Open(ctx context.Context, archivePath, cacheDir string) (Reader, error) {
 	switch ext(archivePath) {
 	case ".zip", ".cbz":
 		return openZip(archivePath)
+	case ".epub":
+		return openEPUB(archivePath)
+	case ".pdf":
+		return openPDF(ctx, archivePath, cacheDir)
+	case ".mobi":
+		return openMOBI(ctx, archivePath, cacheDir)
 	default:
 		return openExtracted(ctx, archivePath, cacheDir)
 	}
@@ -88,7 +94,7 @@ func openZip(path string) (Reader, error) {
 	return zr, nil
 }
 
-func (z *zipReader) List() []string { return z.names }
+func (z *zipReader) List() []string { return append([]string(nil), z.names...) }
 
 func (z *zipReader) Open(name string) (io.ReadCloser, error) {
 	f, ok := z.files[name]
@@ -114,6 +120,12 @@ func openExtracted(ctx context.Context, archivePath, cacheDir string) (Reader, e
 	if err := ensureExtracted(ctx, archivePath, cacheDir); err != nil {
 		return nil, err
 	}
+	return newDirReader(cacheDir)
+}
+
+// newDirReader lists the image files under cacheDir (natural sort) and returns a
+// Reader that serves them. Shared by every extract-to-cache format (rar/7z, pdf, mobi).
+func newDirReader(cacheDir string) (Reader, error) {
 	dr := &dirReader{dir: cacheDir}
 	walkErr := filepath.WalkDir(cacheDir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
@@ -136,7 +148,7 @@ func openExtracted(ctx context.Context, archivePath, cacheDir string) (Reader, e
 	return dr, nil
 }
 
-func (d *dirReader) List() []string { return d.names }
+func (d *dirReader) List() []string { return append([]string(nil), d.names...) }
 
 func (d *dirReader) Open(name string) (io.ReadCloser, error) {
 	return os.Open(filepath.Join(d.dir, filepath.FromSlash(name)))

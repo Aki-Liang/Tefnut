@@ -110,6 +110,9 @@ func (s *Server) apiAddPath(c echo.Context) error {
 	if err != nil || !info.IsDir() {
 		return fail(c, http.StatusBadRequest, errors.New("path is not a readable directory"))
 	}
+	if ok, err := PathWithinRoots(abs, s.allowedRoots); err != nil || !ok {
+		return fail(c, http.StatusBadRequest, errors.New("目录必须在允许的库根之内"))
+	}
 	name := strings.TrimSpace(body.Name)
 	if name == "" {
 		name = filepath.Base(abs)
@@ -125,6 +128,11 @@ func (s *Server) apiAddPath(c echo.Context) error {
 		return fail(c, http.StatusInternalServerError, err)
 	}
 	return ok(c, lp)
+}
+
+func (s *Server) apiScanNow(c echo.Context) error {
+	started := s.reconf.ScanNow()
+	return ok(c, map[string]any{"triggered": started})
 }
 
 func (s *Server) apiDeletePath(c echo.Context) error {

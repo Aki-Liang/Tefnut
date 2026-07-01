@@ -10,19 +10,22 @@
     {{end}}
   </ul>
   <form id="addpath" class="row">
-    <input id="np-path" placeholder="库目录绝对路径，如 /Users/me/comic">
-    <input id="np-name" placeholder="显示名（默认取末段）">
+    <input id="np-path" placeholder="库目录绝对路径，如 /Users/me/comic" autocomplete="off">
+    <input id="np-name" placeholder="显示名（默认取末段）" autocomplete="off">
     <button>添加</button>
   </form>
 </section>
 
 <section class="card-box">
-  <h2>扫描方式</h2>
+  <div class="card-head">
+    <h2>扫描方式</h2>
+    <button type="submit" form="scanform">保存</button>
+  </div>
   <form id="scanform" class="scanform">
     <div class="mode-row">
       <label><input type="radio" name="mode" value="interval"> 定时间隔</label>
       <span class="mode-args" data-mode="interval">
-        <input id="iv" placeholder="如 30m">
+        <input id="iv" placeholder="如 30m" autocomplete="off">
         <small class="hint">格式：如 30m、2h、90m；单位 s/m/h</small>
       </span>
     </div>
@@ -36,8 +39,11 @@
     <div class="mode-row">
       <label><input type="radio" name="mode" value="watch"> 监控路径（文件变化即扫描）</label>
     </div>
-    <div><button type="submit">保存</button></div>
   </form>
+  <div class="scan-now-row">
+    <button type="button" id="scan-now" class="card-box-btn">立即扫描</button>
+    <span id="scan-now-status" class="hint"></span>
+  </div>
 </section>
 
 <div id="scan-data" data-mode="{{.ScanMode}}" data-interval="{{.ScanInterval}}" data-daily="{{.ScanDailyTime}}" hidden></div>

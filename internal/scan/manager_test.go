@@ -11,14 +11,16 @@ import (
 )
 
 type fakeScanner struct {
-	mu sync.Mutex
-	n  int
-	ch chan struct{}
+	mu    sync.Mutex
+	n     int
+	ch    chan struct{}
+	block chan struct{} // if non-nil, Scan waits on it before returning
 }
 
 func (f *fakeScanner) Scan(ctx context.Context) error {
 	f.mu.Lock()
 	f.n++
+	b := f.block
 	f.mu.Unlock()
 	if f.ch != nil {
 		select {
@@ -26,9 +28,13 @@ func (f *fakeScanner) Scan(ctx context.Context) error {
 		default:
 		}
 	}
+	if b != nil {
+		<-b
+	}
 	return nil
 }
-func (f *fakeScanner) count() int { f.mu.Lock(); defer f.mu.Unlock(); return f.n }
+func (f *fakeScanner) count() int                { f.mu.Lock(); defer f.mu.Unlock(); return f.n }
+func (f *fakeScanner) setBlock(ch chan struct{}) { f.mu.Lock(); f.block = ch; f.mu.Unlock() }
 
 func newRepos(t *testing.T) (*store.SettingsRepo, *store.LibraryPathRepo) {
 	t.Helper()
@@ -111,5 +117,35 @@ func TestReconfigureUsesBaseContextNotRequestContext(t *testing.T) {
 		// good: scan ran despite the cancelled request ctx (it used baseCtx)
 	case <-time.After(2 * time.Second):
 		t.Fatal("reconfigure rescan did not run — it must use the base context, not the cancelled request context")
+	}
+}
+
+func TestScanNowGuard(t *testing.T) {
+	settings, paths := newRepos(t)
+	fs := &fakeScanner{}
+	m := New(fs, settings, paths, t.TempDir(), 0)
+
+	block := make(chan struct{})
+	fs.setBlock(block)
+
+	if !m.ScanNow() {
+		t.Fatal("first ScanNow should start a scan")
+	}
+	if m.ScanNow() {
+		t.Fatal("second ScanNow should be skipped while a scan is running")
+	}
+
+	close(block) // release the held scan so the goroutine can clear the flag
+
+	started := false
+	for i := 0; i < 200; i++ {
+		if m.ScanNow() {
+			started = true
+			break
+		}
+		time.Sleep(5 * time.Millisecond)
+	}
+	if !started {
+		t.Fatal("ScanNow should start again after the prior scan finished")
 	}
 }

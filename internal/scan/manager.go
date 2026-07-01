@@ -33,6 +33,7 @@ type Manager struct {
 	cron     *cron.Cron
 	stopMode func() // tears down the current mode (cron stop / watcher close)
 	debounce time.Duration
+	scanning bool // guarded by mu; true while a ScanNow scan is in flight
 }
 
 func New(sc Scanner, settings *store.SettingsRepo, paths *store.LibraryPathRepo, dataDir string, cacheMaxBytes int64) *Manager {
@@ -78,6 +79,35 @@ func (m *Manager) baseContext() context.Context {
 		return context.Background()
 	}
 	return m.baseCtx
+}
+
+// ScanNow starts a background scan of the configured libraries unless one is
+// already running. It returns true if it started a scan, false if one was
+// already in flight. The scan uses the long-lived base context, never a
+// request context.
+func (m *Manager) ScanNow() bool {
+	m.mu.Lock()
+	if m.scanning {
+		m.mu.Unlock()
+		return false
+	}
+	m.scanning = true
+	base := m.baseCtx
+	m.mu.Unlock()
+	if base == nil {
+		base = context.Background()
+	}
+	go func() {
+		defer func() {
+			m.mu.Lock()
+			m.scanning = false
+			m.mu.Unlock()
+		}()
+		if err := m.runScan(base); err != nil {
+			log.Printf("scan: manual scan: %v", err)
+		}
+	}()
+	return true
 }
 
 // Reconfigure tears down the current mode, starts the mode from current

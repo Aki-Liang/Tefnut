@@ -14,9 +14,10 @@ import (
 const archiveCacheSize = 8
 const decodeConcurrency = 4
 
-// Reconfigurer is satisfied by *scan.Manager via its Reconfigure method.
+// Reconfigurer is satisfied by *scan.Manager.
 type Reconfigurer interface {
 	Reconfigure(ctx context.Context) error
+	ScanNow() bool
 }
 
 type Server struct {
@@ -32,13 +33,14 @@ type Server struct {
 	thumbs         *thumbCache
 	readers        *archive.ReaderCache
 	decodeSem      chan struct{}
+	allowedRoots   []string
 }
 
 const thumbCacheMaxEntries = 512
 
 func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.ProgressRepo,
 	settings *store.SettingsRepo, paths *store.LibraryPathRepo, reconf Reconfigurer,
-	dataDir string, thumbWidth int, pageThumbWidth int) *Server {
+	dataDir string, thumbWidth int, pageThumbWidth int, allowedRoots []string) *Server {
 	// lru.New only errors on size<=0; thumbCacheMaxEntries is a positive
 	// constant, so the ignored error is safe.
 	tc, _ := newThumbCache(thumbCacheMaxEntries, filepath.Join(dataDir, "thumbs"))
@@ -46,7 +48,8 @@ func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.Progr
 		paths: paths, reconf: reconf, dataDir: dataDir, thumbWidth: thumbWidth,
 		pageThumbWidth: pageThumbWidth,
 		thumbs:         tc, readers: archive.NewReaderCache(archiveCacheSize),
-		decodeSem: make(chan struct{}, decodeConcurrency)}
+		decodeSem:    make(chan struct{}, decodeConcurrency),
+		allowedRoots: allowedRoots}
 }
 
 // Register wires routes and static assets onto e.
@@ -58,6 +61,7 @@ func (s *Server) Register(e *echo.Echo) {
 	e.GET("/", s.pageBrowse)
 	e.GET("/folder/:id", s.pageBrowse)
 	e.GET("/read/:id", s.pageReader)
+	e.GET("/comic/:id", s.pageComicDetail)
 	e.GET("/tags", s.pageTags)
 	e.GET("/settings", s.pageSettings)
 
@@ -81,5 +85,7 @@ func (s *Server) Register(e *echo.Echo) {
 	api.PUT("/settings", s.apiUpdateSettings)
 	api.POST("/settings/paths", s.apiAddPath)
 	api.DELETE("/settings/paths/:id", s.apiDeletePath)
+
+	api.POST("/scan", s.apiScanNow)
 
 }

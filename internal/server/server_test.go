@@ -18,9 +18,13 @@ import (
 	"Tefnut/internal/store"
 )
 
-type stubReconf struct{ calls int }
+type stubReconf struct {
+	calls int
+	scans int
+}
 
 func (s *stubReconf) Reconfigure(ctx context.Context) error { s.calls++; return nil }
+func (s *stubReconf) ScanNow() bool                         { s.scans++; return true }
 
 func newTestServer(t *testing.T) (*Server, *echo.Echo, *store.DB) {
 	t.Helper()
@@ -31,7 +35,7 @@ func newTestServer(t *testing.T) (*Server, *echo.Echo, *store.DB) {
 	}
 	t.Cleanup(func() { db.Close() })
 	s := NewServer(store.NewNodeRepo(db), store.NewTagRepo(db), store.NewProgressRepo(db),
-		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), &stubReconf{}, data, 400, 120)
+		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), &stubReconf{}, data, 400, 120, nil)
 	e := echo.New()
 	s.Register(e)
 	return s, e, db
@@ -367,6 +371,36 @@ func TestPageBrowseRenders(t *testing.T) {
 	}
 }
 
+func TestBrowseFolderHasUpButton(t *testing.T) {
+	_, e, db := newTestServer(t)
+	repo := store.NewNodeRepo(db)
+	dir, _ := repo.Create(context.Background(), &store.Node{Name: "MyDir", Path: "/x", Type: store.NodeDir})
+	child, _ := repo.Create(context.Background(), &store.Node{ParentID: dir.ID, Name: "Sub", Path: "/x/sub", Type: store.NodeDir})
+
+	// root (library home): no up button
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+	if strings.Contains(rec.Body.String(), "上一级") {
+		t.Fatalf("root must not show the up button: %s", rec.Body.String())
+	}
+
+	// top-level folder: up button links to the library root
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/folder/"+itoa(dir.ID), nil))
+	body := rec.Body.String()
+	if rec.Code != 200 || !strings.Contains(body, `class="up-btn" href="/"`) {
+		t.Fatalf("top-level folder up must link to root: status=%d body=%s", rec.Code, body)
+	}
+
+	// nested folder: up button links to the parent folder
+	rec = httptest.NewRecorder()
+	e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/folder/"+itoa(child.ID), nil))
+	body = rec.Body.String()
+	if !strings.Contains(body, `class="up-btn" href="/folder/`+itoa(dir.ID)+`"`) {
+		t.Fatalf("nested folder up must link to parent folder: %s", body)
+	}
+}
+
 func TestPageReaderRenders(t *testing.T) {
 	s, e, db := newTestServer(t)
 	n := seedComic(t, db, s.dataDir)
@@ -400,8 +434,9 @@ func TestApiUpdateSettingsValidatesMode(t *testing.T) {
 }
 
 func TestApiAddAndDeletePath(t *testing.T) {
-	_, e, db := newTestServer(t)
+	s, e, db := newTestServer(t)
 	dir := t.TempDir()
+	s.allowedRoots = []string{dir}
 	body := `{"name":"L","path":"` + dir + `"}`
 	req := httptest.NewRequest(http.MethodPost, "/api/settings/paths", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
@@ -443,7 +478,7 @@ func TestSettingsUpdateTriggersReconfigure(t *testing.T) {
 	defer db.Close()
 	rc := &stubReconf{}
 	s := NewServer(store.NewNodeRepo(db), store.NewTagRepo(db), store.NewProgressRepo(db),
-		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), rc, data, 400, 120)
+		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), rc, data, 400, 120, nil)
 	e := echo.New()
 	s.Register(e)
 	req := httptest.NewRequest(http.MethodPut, "/api/settings",
@@ -456,6 +491,19 @@ func TestSettingsUpdateTriggersReconfigure(t *testing.T) {
 	}
 	if rc.calls != 1 {
 		t.Fatalf("expected Reconfigure called once, got %d", rc.calls)
+	}
+}
+
+func TestApiScanNow(t *testing.T) {
+	_, e, _ := newTestServer(t)
+	req := httptest.NewRequest(http.MethodPost, "/api/scan", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	if !strings.Contains(rec.Body.String(), `"triggered":true`) {
+		t.Fatalf("body=%s, want triggered:true", rec.Body.String())
 	}
 }
 
@@ -629,6 +677,80 @@ func TestServerErrorBodyIsGeneric(t *testing.T) {
 	}
 }
 
+func TestApiAddPathRejectsOutsideRoot(t *testing.T) {
+	s, e, _ := newTestServer(t)
+	root := t.TempDir()
+	s.allowedRoots = []string{root}
+
+	post := func(path string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest(http.MethodPost, "/api/settings/paths",
+			strings.NewReader(`{"name":"L","path":"`+path+`"}`))
+		req.Header.Set("Content-Type", "application/json")
+		rec := httptest.NewRecorder()
+		e.ServeHTTP(rec, req)
+		return rec
+	}
+
+	inside := filepath.Join(root, "lib")
+	if err := os.MkdirAll(inside, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if rec := post(inside); rec.Code != 200 {
+		t.Fatalf("inside root: status=%d body=%s", rec.Code, rec.Body.String())
+	}
+
+	outside := t.TempDir() // exists, readable, but not under root
+	rec := post(outside)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("outside root: status=%d, want 400", rec.Code)
+	}
+	if strings.Contains(rec.Body.String(), root) {
+		t.Fatalf("400 body leaked the root path: %s", rec.Body.String())
+	}
+}
+
+func TestPageComicDetailRenders(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	tr := store.NewTagRepo(db)
+	tag, err := tr.Upsert(context.Background(), "action")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := tr.AddToNode(context.Background(), n.ID, tag.ID); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/comic/"+itoa(n.ID), nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != 200 {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	for _, want := range []string{
+		n.Name,
+		`src="/api/comics/` + itoa(n.ID) + `/cover"`,
+		`href="/read/` + itoa(n.ID) + `"`,
+		"action",
+		`id="thumb-grid"`,
+		`data-pages="1"`,
+	} {
+		if !strings.Contains(body, want) {
+			t.Fatalf("detail body missing %q", want)
+		}
+	}
+}
+
+func TestPageComicDetailNotFound(t *testing.T) {
+	_, e, _ := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/comic/99999", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status=%d, want 404", rec.Code)
+	}
+}
+
 func TestSidebarOnBrowseNotReader(t *testing.T) {
 	s, e, db := newTestServer(t)
 	n := seedComic(t, db, s.dataDir)
@@ -649,5 +771,37 @@ func TestSidebarOnBrowseNotReader(t *testing.T) {
 	}
 	if !strings.Contains(rrec.Body.String(), "下一页") {
 		t.Fatal("reader should have a visible 下一页 button")
+	}
+}
+
+func TestBrowseCardLinksToComicDetail(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	body := rec.Body.String()
+	if !strings.Contains(body, `href="/comic/`+itoa(n.ID)+`"`) {
+		t.Fatalf("comic card should link to /comic/<id>; body=%s", body)
+	}
+	if strings.Contains(body, `href="/read/`+itoa(n.ID)+`"`) {
+		t.Fatalf("comic card should NOT link straight to /read/<id>")
+	}
+}
+
+func TestReaderHasNoMetadataControls(t *testing.T) {
+	s, e, db := newTestServer(t)
+	n := seedComic(t, db, s.dataDir)
+	req := httptest.NewRequest(http.MethodGet, "/read/"+itoa(n.ID), nil)
+	rec := httptest.NewRecorder()
+	e.ServeHTTP(rec, req)
+	body := rec.Body.String()
+	for _, gone := range []string{`id="addtag"`, `id="rating"`, `id="author"`} {
+		if strings.Contains(body, gone) {
+			t.Fatalf("reader bar should no longer contain %q", gone)
+		}
+	}
+	if !strings.Contains(body, `id="modetoggle"`) {
+		t.Fatalf("reader should still have reading controls (modetoggle)")
 	}
 }

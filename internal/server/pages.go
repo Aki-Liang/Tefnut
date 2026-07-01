@@ -33,18 +33,26 @@ type browseData struct {
 	Tags       []*store.TagCount
 	Items      []*store.Node
 	Breadcrumb []crumb
+	ShowUp     bool  // inside a folder → offer a one-level-up button
+	UpID       int64 // parent of the current folder (0 = library root)
 }
 
 type readerData struct {
 	ID               int64
 	Name             string
-	Author           string
-	Rating           int
 	PageCount        int
 	LastPage         int
-	Ratings          []int
 	ReadingDirection string
 	DisplayMode      string
+}
+
+type comicData struct {
+	ID        int64
+	Name      string
+	Author    string
+	Rating    int
+	PageCount int
+	Tags      []*store.Tag
 }
 
 // render clones the base layout template set, parses the given page template
@@ -96,6 +104,14 @@ func (s *Server) pageBrowse(c echo.Context) error {
 		log.Printf("server: list tags for browse: %v", err)
 	}
 
+	crumbs := s.breadcrumb(ctx, parent)
+	// crumbs run root→current; the current folder is the last crumb, so its
+	// parent (the up-one-level target) is the second-to-last, else the root.
+	var upID int64
+	if n := len(crumbs); n >= 2 {
+		upID = crumbs[n-2].ID
+	}
+
 	data := browseData{
 		Title:      title,
 		ParentID:   parent,
@@ -105,7 +121,9 @@ func (s *Server) pageBrowse(c echo.Context) error {
 		Ratings:    ratingChoices,
 		Tags:       tags,
 		Items:      items,
-		Breadcrumb: s.breadcrumb(ctx, parent),
+		Breadcrumb: crumbs,
+		ShowUp:     parent != 0,
+		UpID:       upID,
 	}
 	return render(c, "browse.html", data)
 }
@@ -125,6 +143,23 @@ func (s *Server) breadcrumb(ctx context.Context, parent int64) []crumb {
 		id = n.ParentID
 	}
 	return crumbs
+}
+
+func (s *Server) pageComicDetail(c echo.Context) error {
+	ctx := c.Request().Context()
+	id, err := parseID(c, "id")
+	if err != nil {
+		return fail(c, http.StatusBadRequest, err)
+	}
+	n, err := s.nodes.Get(ctx, id)
+	if err != nil {
+		return fail(c, http.StatusNotFound, err)
+	}
+	tags, _ := s.tags.ListForNode(ctx, id)
+	return render(c, "comic.html", comicData{
+		ID: n.ID, Name: n.Name, Author: n.Author, Rating: n.Rating,
+		PageCount: n.PageCount, Tags: tags,
+	})
 }
 
 func (s *Server) pageSettings(c echo.Context) error {
@@ -165,11 +200,8 @@ func (s *Server) pageReader(c echo.Context) error {
 	return render(c, "reader.html", readerData{
 		ID:               n.ID,
 		Name:             n.Name,
-		Author:           n.Author,
-		Rating:           n.Rating,
 		PageCount:        n.PageCount,
 		LastPage:         last,
-		Ratings:          ratingChoices,
 		ReadingDirection: dir,
 		DisplayMode:      displayMode,
 	})

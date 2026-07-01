@@ -4,13 +4,15 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
 type Library struct {
-	RootPath string `yaml:"rootPath"`
+	RootPath     string   `yaml:"rootPath"`
+	AllowedRoots []string `yaml:"allowedRoots"`
 }
 
 type Server struct {
@@ -72,6 +74,18 @@ func (c *Config) validate() error {
 	info, err := os.Stat(c.Library.RootPath)
 	if err != nil || !info.IsDir() {
 		return fmt.Errorf("config: library.rootPath %q is not a readable directory", c.Library.RootPath)
+	}
+	// AllowedRoots gate which directories the path API may add as libraries.
+	// Default to the configured library root; resolve all entries to absolute.
+	if len(c.Library.AllowedRoots) == 0 {
+		c.Library.AllowedRoots = []string{c.Library.RootPath}
+	}
+	for i, r := range c.Library.AllowedRoots {
+		abs, err := filepath.Abs(r)
+		if err != nil {
+			return fmt.Errorf("config: library.allowedRoots %q: %w", r, err)
+		}
+		c.Library.AllowedRoots[i] = abs
 	}
 	if c.DataDir == "" {
 		return errors.New("config: dataDir is required")
