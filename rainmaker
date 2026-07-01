@@ -43,6 +43,8 @@ else
   err "  curl -fsSL .../rainmaker | bash -s -- /你的漫画目录"
   exit 1
 fi
+# Docker volume short-syntax splits on ':', so a path containing one can't be mounted.
+case "$COMICS_PATH" in *:*) err "库路径不能包含冒号 ':'（Docker 卷映射不支持）。"; exit 1;; esac
 
 # --- port + timezone ---
 detect_tz() {
@@ -60,22 +62,24 @@ DTZ="$(detect_tz)"
 TZ_VAL="$(ask "时区 [$DTZ]: " "$DTZ")"
 
 # --- generate docker-compose.yml (values baked in) ---
-cat >"$COMPOSE_FILE" <<YAML
-services:
-  tefnut:
-    image: $IMAGE
-    container_name: tefnut
-    ports:
-      - "$PORT:8086"
-    volumes:
-      - $COMICS_PATH:/comics:ro
-      - tefnut-data:/data
-    environment:
-      - TZ=$TZ_VAL
-    restart: unless-stopped
-volumes:
-  tefnut-data:
-YAML
+# printf (not a heredoc) so the user-supplied path/TZ are written literally
+# and never re-parsed by the shell (no $ / backtick expansion).
+{
+  printf 'services:\n'
+  printf '  tefnut:\n'
+  printf '    image: %s\n' "$IMAGE"
+  printf '    container_name: tefnut\n'
+  printf '    ports:\n'
+  printf '      - "%s:8086"\n' "$PORT"
+  printf '    volumes:\n'
+  printf '      - %s:/comics:ro\n' "$COMICS_PATH"
+  printf '      - tefnut-data:/data\n'
+  printf '    environment:\n'
+  printf '      - TZ=%s\n' "$TZ_VAL"
+  printf '    restart: unless-stopped\n'
+  printf 'volumes:\n'
+  printf '  tefnut-data:\n'
+} >"$COMPOSE_FILE"
 info "已生成 $(pwd)/$COMPOSE_FILE"
 
 # --- launch (up -d auto-pulls the public image; no separate hard-failing pull) ---
@@ -89,6 +93,6 @@ fi
 if command -v curl >/dev/null 2>&1; then
   for _ in $(seq 1 30); do curl -fsS -o /dev/null "http://127.0.0.1:$PORT/healthz" 2>/dev/null && break; sleep 1; done
 fi
-docker compose ps
+docker compose ps || true
 info "打开: http://localhost:$PORT"
 info "（首次启动会在后台扫描漫画库并生成封面，大库可能需要几分钟。）"
