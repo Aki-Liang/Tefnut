@@ -73,7 +73,10 @@ func TestOpenEPUBSpineOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer rc.Close()
-	b, _ := io.ReadAll(rc)
+	b, err := io.ReadAll(rc)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, _, err := image.Decode(bytes.NewReader(b)); err != nil {
 		t.Fatalf("page not decodable: %v", err)
 	}
@@ -95,6 +98,9 @@ func TestOpenEPUBFallbackNatsort(t *testing.T) {
 	defer r.Close()
 	got := r.List()
 	want := []string{"img/1.png", "img/2.png", "img/10.png"} // natural, not lexical
+	if len(got) != len(want) {
+		t.Fatalf("List() = %v, want %v", got, want)
+	}
 	for i := range want {
 		if got[i] != want[i] {
 			t.Fatalf("List() = %v, want %v", got, want)

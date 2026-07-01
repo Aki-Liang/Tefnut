@@ -36,7 +36,7 @@ type epubReader struct {
 	names []string
 }
 
-func (e *epubReader) List() []string { return e.names }
+func (e *epubReader) List() []string { return append([]string(nil), e.names...) }
 
 func (e *epubReader) Open(name string) (io.ReadCloser, error) {
 	f, ok := e.files[name]
