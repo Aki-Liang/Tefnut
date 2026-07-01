@@ -6,12 +6,12 @@ services:
     # build: .
     container_name: tefnut
     ports:
-      - "8086:8086"
+      - "${TEFNUT_PORT:-8086}:8086"
     volumes:
-      - /path/to/your/comics:/comics:ro   # EDIT: your comic library (read-only)
+      - ${COMICS_PATH:?COMICS_PATH is required - run ./start.sh or set it in .env}:/comics:ro
       - tefnut-data:/data                  # persistent DB, thumbnails, cache
     environment:
-      - TZ=Asia/Shanghai                   # timezone for the daily-scan schedule
+      - TZ=${TZ:-Asia/Shanghai}
     restart: unless-stopped
 
 volumes:
