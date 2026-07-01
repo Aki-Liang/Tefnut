@@ -1,35 +1,32 @@
 # Tefnut
 
-A self-hosted family comic server (Plex-for-comics). Point it at a directory of
-comic archives (`.zip/.cbz`, `.rar/.cbr`, `.7z/.cb7`) and read them in your
-browser. Single Go binary + a SQLite file; no external database.
+自托管的家庭漫画服务器（漫画版 Plex）。把它指向一个装漫画的目录 —— 支持 `.zip/.cbz`、`.rar/.cbr`、`.7z/.cb7` 压缩包，以及 `.pdf`、`.epub`、`.mobi` —— 就能在浏览器里阅读。单个 Go 二进制 + 一个 SQLite 文件，无需外部数据库。
 
-## Quick start
+## 快速开始
 
-1. Edit `cmd/tefnut/config.yaml` (or copy it next to the binary):
-   - `library.rootPath` — your comic library directory
-   - `dataDir` — where the DB, thumbnails, and extract cache live
-   - `server.addr` — listen address (default `:8086`)
-   - `scan.interval` — rescan period (default `2m`)
-   - `thumbnail.width` — cover width in px (default `400`)
-2. Run:
+1. 编辑 `cmd/tefnut/config.yaml`（或复制一份放到二进制旁边）：
+   - `library.rootPath` — 你的漫画库目录
+   - `dataDir` — 数据库、缩略图、解压缓存的存放位置
+   - `server.addr` — 监听地址（默认 `:8086`）
+   - `scan.interval` — 重新扫描周期（默认 `1h`）
+   - `thumbnail.width` — 封面宽度，像素（默认 `400`）
+2. 运行：
    ```bash
    go run ./cmd/tefnut -config ./cmd/tefnut/config.yaml
    ```
-3. Open http://localhost:8086
+3. 打开 http://localhost:8086
 
-Drop new comic archives into the library directory; they appear after the next
-scan (and immediately on restart).
+把新漫画放进库目录，下次扫描后就会出现（重启时立即生效）。
 
-## Features
-- Folder-based browsing of the library tree
-- Auto-generated cover thumbnails (first page of each archive)
-- In-browser reader with keyboard paging and remembered progress
-- Per-comic author, 0–5★ rating, and free-text tags
-- Search by name; filter by tag and minimum rating
-- Tag management page (rename / delete / counts)
+## 功能特性
+- 按文件夹浏览整个漫画库树
+- 自动生成封面缩略图（每本漫画的第一页）
+- 浏览器内阅读器：键盘翻页、记忆阅读进度
+- 每本漫画可设作者、0–5★ 评分、自由文本标签
+- 按名称搜索；按标签和最低评分筛选
+- 标签管理页（重命名 / 删除 / 计数）
 
-## Build
+## 构建
 ```bash
 go build -o tefnut ./cmd/tefnut
 ```
