@@ -50,14 +50,7 @@ go build -o tefnut ./cmd/tefnut
 
 镜像发布在 GHCR：`ghcr.io/aki-liang/tefnut`（支持 `linux/amd64` 和 `linux/arm64`）。
 
-1. 编辑 `docker-compose.yml`，把 `/path/to/your/comics` 改成你的漫画库目录，按需改 `TZ`。
-2. 启动：
-
-   ```bash
-   docker compose up -d
-   ```
-
-3. 浏览器打开 `http://<主机IP>:8086`。
+启动后，浏览器打开 `http://<主机IP>:8086`（端口默认 8086，可在 `.env` 里用 `TEFNUT_PORT` 修改）。
 
 **卷与端口：**
 
