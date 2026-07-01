@@ -36,6 +36,18 @@ go build -o tefnut ./cmd/tefnut
 
 ## Docker 部署
 
+### 一键启动（推荐）
+
+```bash
+./start.sh
+```
+
+脚本会引导你填写漫画库路径、端口、时区，写入 `.env`，然后 `docker compose up -d` 启动，并打印访问地址。再次运行会以现有 `.env` 为默认值重新配置。
+
+手动方式：复制 `.env.example` 为 `.env` 并编辑，再 `docker compose up -d`。
+
+> 默认定时扫描间隔为 **1 小时**（可在「设置」页调整）。
+
 镜像发布在 GHCR：`ghcr.io/aki-liang/tefnut`（支持 `linux/amd64` 和 `linux/arm64`）。
 
 1. 编辑 `docker-compose.yml`，把 `/path/to/your/comics` 改成你的漫画库目录，按需改 `TZ`。
