@@ -20,6 +20,7 @@ var imageExts = map[string]bool{
 // format's reader lands (epub → pdf → mobi).
 var comicExts = map[string]bool{
 	".epub": true,
+	".pdf":  true,
 }
 
 func ext(name string) string { return strings.ToLower(path.Ext(name)) }

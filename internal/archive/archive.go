@@ -27,6 +27,8 @@ func Open(ctx context.Context, archivePath, cacheDir string) (Reader, error) {
 		return openZip(archivePath)
 	case ".epub":
 		return openEPUB(archivePath)
+	case ".pdf":
+		return openPDF(ctx, archivePath, cacheDir)
 	default:
 		return openExtracted(ctx, archivePath, cacheDir)
 	}
@@ -116,6 +118,12 @@ func openExtracted(ctx context.Context, archivePath, cacheDir string) (Reader, e
 	if err := ensureExtracted(ctx, archivePath, cacheDir); err != nil {
 		return nil, err
 	}
+	return newDirReader(cacheDir)
+}
+
+// newDirReader lists the image files under cacheDir (natural sort) and returns a
+// Reader that serves them. Shared by every extract-to-cache format (rar/7z, pdf, mobi).
+func newDirReader(cacheDir string) (Reader, error) {
 	dr := &dirReader{dir: cacheDir}
 	walkErr := filepath.WalkDir(cacheDir, func(p string, d os.DirEntry, err error) error {
 		if err != nil {
