@@ -23,14 +23,15 @@ type ReaderCache struct {
 	mu      sync.Mutex
 	max     int
 	entries map[string]*cacheEntry
-	lru     *list.List // front = most recently used
+	lru     *list.List             // front = most recently used
+	loading map[string]*sync.Mutex // per-key open serialization (never deleted; bounded by #comics)
 }
 
 func NewReaderCache(max int) *ReaderCache {
 	if max < 1 {
 		max = 1
 	}
-	return &ReaderCache{max: max, entries: make(map[string]*cacheEntry), lru: list.New()}
+	return &ReaderCache{max: max, entries: make(map[string]*cacheEntry), lru: list.New(), loading: make(map[string]*sync.Mutex)}
 }
 
 func (c *ReaderCache) Acquire(ctx context.Context, key, path string, mtime int64, cacheDir string) (Reader, func(), error) {
@@ -41,9 +42,30 @@ func (c *ReaderCache) Acquire(ctx context.Context, key, path string, mtime int64
 		c.mu.Unlock()
 		return e.reader, c.releaser(e), nil
 	}
-	// Stale (mtime changed) or missing: drop the old entry from the map and open fresh.
+	// Serialize opens of the same key so concurrent first-touches don't both run
+	// Open — for pdf/mobi/rar that extracts into the same cacheDir, and a second
+	// goroutine could otherwise observe a half-written dir and cache a truncated
+	// page list. The per-key lock is never deleted (bounded by the number of comics).
+	lk := c.loading[key]
+	if lk == nil {
+		lk = &sync.Mutex{}
+		c.loading[key] = lk
+	}
+	c.mu.Unlock()
+
+	lk.Lock()
+	defer lk.Unlock()
+
+	// Re-check under the load lock: a prior holder may have opened + inserted.
+	c.mu.Lock()
+	if e, ok := c.entries[key]; ok && e.mtime == mtime && !e.evicted {
+		e.refs++
+		c.lru.MoveToFront(e.elem)
+		c.mu.Unlock()
+		return e.reader, c.releaser(e), nil
+	}
 	if e, ok := c.entries[key]; ok {
-		c.dropLocked(e)
+		c.dropLocked(e) // stale mtime
 	}
 	c.mu.Unlock()
 
@@ -53,8 +75,6 @@ func (c *ReaderCache) Acquire(ctx context.Context, key, path string, mtime int64
 	}
 
 	c.mu.Lock()
-	// Another goroutine may have inserted concurrently; if so, use ours but it
-	// will simply be an extra short-lived reader — acceptable. Insert ours.
 	e := &cacheEntry{key: key, mtime: mtime, reader: r, refs: 1}
 	e.elem = c.lru.PushFront(e)
 	c.entries[key] = e

@@ -29,8 +29,12 @@ func ensurePDFExtracted(pdfPath, cacheDir string) error {
 		return nil
 	}
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
-		return err
+		return fmt.Errorf("archive: mkdir cache %s: %w", cacheDir, err)
 	}
+	// NOTE: pdfcpu also emits ".tif" for CCITT/bilevel-scanned pages, which the
+	// pipeline does not decode (imageExts/contentType/thumb lack tiff). Such pages
+	// would be silently skipped. Not present in the current library; add a tiff
+	// decoder (e.g. hhrutter/tiff) + .tif to imageExts/contentType if they appear.
 	// nil selectedPages = all pages; nil conf = default configuration.
 	if err := api.ExtractImagesFile(pdfPath, cacheDir, nil, nil); err != nil {
 		return fmt.Errorf("archive: extract pdf %s: %w", pdfPath, err)

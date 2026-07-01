@@ -94,7 +94,7 @@ func openZip(path string) (Reader, error) {
 	return zr, nil
 }
 
-func (z *zipReader) List() []string { return z.names }
+func (z *zipReader) List() []string { return append([]string(nil), z.names...) }
 
 func (z *zipReader) Open(name string) (io.ReadCloser, error) {
 	f, ok := z.files[name]
@@ -148,7 +148,7 @@ func newDirReader(cacheDir string) (Reader, error) {
 	return dr, nil
 }
 
-func (d *dirReader) List() []string { return d.names }
+func (d *dirReader) List() []string { return append([]string(nil), d.names...) }
 
 func (d *dirReader) Open(name string) (io.ReadCloser, error) {
 	return os.Open(filepath.Join(d.dir, filepath.FromSlash(name)))

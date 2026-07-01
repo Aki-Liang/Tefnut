@@ -2,8 +2,16 @@ package archive
 
 import (
 	"context"
+	"fmt"
+	"image"
+	"image/jpeg"
 	"io"
+	"os"
+	"path/filepath"
+	"sync"
 	"testing"
+
+	"github.com/pdfcpu/pdfcpu/pkg/api"
 )
 
 func TestReaderCacheReusesAndRefcounts(t *testing.T) {
@@ -96,6 +104,63 @@ func TestReaderCacheDropHonorsRefcount(t *testing.T) {
 	rel()
 	if fr.closes != 1 {
 		t.Fatalf("last release should close exactly once, closes=%d", fr.closes)
+	}
+}
+
+func TestAcquireSingleFlight(t *testing.T) {
+	dir := t.TempDir()
+	// build a 4-page PDF (4 imported JPEGs) → extract-to-cache path
+	var jpgs []string
+	for i := 0; i < 4; i++ {
+		p := filepath.Join(dir, fmt.Sprintf("p%d.jpg", i))
+		f, err := os.Create(p)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := jpeg.Encode(f, image.NewRGBA(image.Rect(0, 0, 8, 8)), nil); err != nil {
+			t.Fatal(err)
+		}
+		f.Close()
+		jpgs = append(jpgs, p)
+	}
+	pdfPath := filepath.Join(dir, "c.pdf")
+	if err := api.ImportImagesFile(jpgs, pdfPath, nil, nil); err != nil {
+		t.Fatalf("import: %v", err)
+	}
+	cacheDir := filepath.Join(dir, "cache")
+
+	cache := NewReaderCache(4)
+	defer cache.Close()
+
+	const N = 8
+	readers := make([]Reader, N)
+	var wg sync.WaitGroup
+	for i := 0; i < N; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			r, rel, err := cache.Acquire(context.Background(), "k", pdfPath, 1, cacheDir)
+			if err != nil {
+				t.Errorf("goroutine %d: %v", i, err)
+				return
+			}
+			defer rel()
+			readers[i] = r
+			if got := len(r.List()); got != 4 {
+				t.Errorf("goroutine %d: List len = %d, want 4", i, got)
+			}
+		}(i)
+	}
+	wg.Wait()
+
+	uniq := map[Reader]bool{}
+	for _, r := range readers {
+		if r != nil {
+			uniq[r] = true
+		}
+	}
+	if len(uniq) != 1 {
+		t.Fatalf("expected 1 shared reader (single-flight), got %d distinct — Open ran multiple times", len(uniq))
 	}
 }
 

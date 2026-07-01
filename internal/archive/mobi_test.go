@@ -51,6 +51,13 @@ func TestMobiRejectsNonMobi(t *testing.T) {
 	if _, err := mobiImageRecords([]byte("not a palm db at all, definitely")); err == nil {
 		t.Fatal("expected error for non-BOOKMOBI input")
 	}
+
+	// right length, wrong magic → must still error (exercises the BOOKMOBI check)
+	buf := make([]byte, 78)
+	copy(buf[0x3C:], []byte("NOTMOBI!"))
+	if _, err := mobiImageRecords(buf); err == nil {
+		t.Fatal("expected error for wrong magic")
+	}
 }
 
 func TestIsComicMOBI(t *testing.T) {

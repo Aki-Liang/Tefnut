@@ -34,12 +34,13 @@ func ensureMOBIExtracted(mobiPath, cacheDir string) error {
 		return fmt.Errorf("archive: parse mobi %s: %w", mobiPath, err)
 	}
 	if err := os.MkdirAll(cacheDir, 0o755); err != nil {
-		return err
+		return fmt.Errorf("archive: mkdir cache %s: %w", cacheDir, err)
 	}
 	for i, rec := range recs {
 		name := fmt.Sprintf("%04d.%s", i+1, rec.ext)
-		if err := os.WriteFile(filepath.Join(cacheDir, name), rec.data, 0o644); err != nil {
-			return err
+		dst := filepath.Join(cacheDir, name)
+		if err := os.WriteFile(dst, rec.data, 0o644); err != nil {
+			return fmt.Errorf("archive: write %s: %w", dst, err)
 		}
 	}
 	return nil
