@@ -59,16 +59,21 @@ func (m *Manager) runScan(ctx context.Context) error {
 	return nil
 }
 
-// Start runs one blocking scan, then starts the active mode.
+// Start applies the configured scan mode, then kicks the initial scan in the
+// background. The initial scan must NOT block startup: a large first-run library
+// can take minutes to extract every cover, and the HTTP server (started by the
+// caller after Start returns) has to come up immediately. ScanNow's in-flight
+// guard keeps this initial scan from overlapping a scheduled or manual one.
 func (m *Manager) Start(ctx context.Context) error {
 	m.mu.Lock()
 	m.baseCtx = ctx
 	m.mu.Unlock()
 
-	if err := m.runScan(ctx); err != nil {
-		log.Printf("scan: initial scan: %v", err)
+	if err := m.applyMode(); err != nil {
+		return err
 	}
-	return m.applyMode()
+	m.ScanNow()
+	return nil
 }
 
 // baseContext returns the long-lived context set by Start, or context.Background() as fallback.

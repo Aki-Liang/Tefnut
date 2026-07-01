@@ -70,14 +70,47 @@ func TestCronSpec(t *testing.T) {
 
 func TestStartRunsInitialScan(t *testing.T) {
 	settings, paths := newRepos(t)
-	fs := &fakeScanner{}
+	fs := &fakeScanner{ch: make(chan struct{}, 1)}
 	m := New(fs, settings, paths, t.TempDir(), 0)
 	if err := m.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	defer m.Stop()
-	if fs.count() < 1 {
-		t.Fatalf("expected initial scan, count=%d", fs.count())
+	select {
+	case <-fs.ch: // the initial scan runs (in the background)
+	case <-time.After(2 * time.Second):
+		t.Fatalf("expected an initial scan, count=%d", fs.count())
+	}
+}
+
+// A large first-run scan must not block startup: Start applies the mode and
+// kicks the initial scan in the background, so the HTTP server can come up
+// immediately. Regression for the "container unreachable on first boot" bug.
+func TestStartDoesNotBlockOnInitialScan(t *testing.T) {
+	settings, paths := newRepos(t)
+	block := make(chan struct{})
+	defer close(block) // release the background initial scan on exit
+	fs := &fakeScanner{ch: make(chan struct{}, 1)}
+	fs.setBlock(block) // the initial scan blocks until released
+	m := New(fs, settings, paths, t.TempDir(), 0)
+	defer m.Stop()
+
+	done := make(chan error, 1)
+	go func() { done <- m.Start(context.Background()) }()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			t.Fatalf("Start returned error: %v", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Start blocked on the initial scan (it must return before the scan finishes)")
+	}
+	// the initial scan should be running in the background
+	select {
+	case <-fs.ch:
+	case <-time.After(2 * time.Second):
+		t.Fatal("initial scan did not start in the background")
 	}
 }
 
