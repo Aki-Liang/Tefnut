@@ -110,3 +110,18 @@ newtag.addEventListener('keydown', (e) => {
 });
 document.addEventListener('click', (e) => { if (!e.target.closest('.combobox')) closeSuggest(); });
 document.getElementById('d-addtag').addEventListener('submit', (e) => { e.preventDefault(); addTag(newtag.value); });
+
+// ---- page thumbnail grid (lazy) → click opens the reader at that page ----
+const pageCount = parseInt(el.dataset.pages, 10) || 0;
+const grid = document.getElementById('thumb-grid');
+for (let i = 0; i < pageCount; i++) {
+  const a = document.createElement('a');
+  a.className = 'thumb-cell';
+  a.href = `/read/${id}#p=${i}`;
+  const im = document.createElement('img');
+  im.loading = 'lazy';
+  im.src = `/api/comics/${id}/pages/${i}/thumb`;
+  im.alt = `第 ${i + 1} 页`;
+  a.appendChild(im);
+  grid.appendChild(a);
+}

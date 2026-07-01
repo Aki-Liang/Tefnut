@@ -414,3 +414,8 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
 .combobox { position: relative; display: inline-block; }
 .combobox > input { background: var(--ink); color: var(--paper); border: 2px solid var(--line); border-radius: 6px; padding: 7px 10px; font-size: 13px; min-width: 200px; }
 .combobox > input:focus { border-color: var(--seal); }
+
+.thumb-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; margin-top: 28px; }
+.thumb-cell { display: block; border: 2px solid var(--line); border-radius: 3px; overflow: hidden; transition: border-color 0.12s ease; }
+.thumb-cell:hover { border-color: var(--seal); }
+.thumb-cell img { width: 100%; aspect-ratio: 2/3; object-fit: contain; background: var(--ink); display: block; }

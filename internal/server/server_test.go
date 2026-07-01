@@ -702,6 +702,8 @@ func TestPageComicDetailRenders(t *testing.T) {
 		`src="/api/comics/` + itoa(n.ID) + `/cover"`,
 		`href="/read/` + itoa(n.ID) + `"`,
 		"action",
+		`id="thumb-grid"`,
+		`data-pages="1"`,
 	} {
 		if !strings.Contains(body, want) {
 			t.Fatalf("detail body missing %q", want)

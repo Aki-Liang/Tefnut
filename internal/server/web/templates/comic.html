@@ -1,7 +1,7 @@
 {{define "title"}}{{.Name}} · Tefnut{{end}}
 {{define "content"}}
 <a class="crumbs back-link" href="/" id="backlink">← 返回</a>
-<section class="detail" data-id="{{.ID}}" data-rating="{{.Rating}}">
+<section class="detail" data-id="{{.ID}}" data-rating="{{.Rating}}" data-pages="{{.PageCount}}">
   <div class="detail-cover">
     <img src="/api/comics/{{.ID}}/cover" alt="{{.Name}}">
   </div>
@@ -22,5 +22,6 @@
     <a class="read-btn" href="/read/{{.ID}}">阅 读</a>
   </div>
 </section>
+<section class="thumb-grid" id="thumb-grid" aria-label="页面预览"></section>
 {{end}}
 {{define "scripts"}}<script src="/static/js/comic.js"></script>{{end}}

@@ -4,6 +4,8 @@ const el = document.getElementById('reader');
 const id = el.dataset.id;
 const total = parseInt(el.dataset.pages, 10);
 let cur = Math.min(parseInt(el.dataset.start, 10) || 0, Math.max(total - 1, 0));
+const hashP = location.hash.match(/^#p=(\d+)$/);
+if (hashP) cur = Math.max(0, Math.min(parseInt(hashP[1], 10), Math.max(total - 1, 0)));
 let dir = el.dataset.dir || 'ltr';
 let mode = el.dataset.mode || 'single';
 let spreadStep = localStorage.getItem('spreadStep') === '1' ? 1 : 2;
