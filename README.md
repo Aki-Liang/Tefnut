@@ -41,10 +41,17 @@ go build -o tefnut ./cmd/tefnut
 curl -fsSL https://raw.githubusercontent.com/Aki-Liang/Tefnut/main/rainmaker | bash
 ```
 
-按提示填漫画库路径、端口、时区即可。也可非交互，直接把库路径作为参数传入：
+按提示填漫画库路径、端口、时区、磁盘缓存上限即可。也可非交互，直接把库路径作为参数传入：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Aki-Liang/Tefnut/main/rainmaker | bash -s -- ~/comics
+```
+
+缓存上限也可通过环境变量预设（非交互时直接生效）：
+
+```bash
+TEFNUT_CACHE_MAX_BYTES=4GiB TEFNUT_THUMB_PAGES_MAX_BYTES=1GiB \
+  curl -fsSL https://raw.githubusercontent.com/Aki-Liang/Tefnut/main/rainmaker | bash -s -- ~/comics
 ```
 
 镜像发布在 GHCR：`ghcr.io/aki-liang/tefnut`（公开可拉，支持 `linux/amd64` 和 `linux/arm64`）。启动后浏览器打开 `http://<主机IP>:8086`。
@@ -57,6 +64,8 @@ curl -fsSL https://raw.githubusercontent.com/Aki-Liang/Tefnut/main/rainmaker | b
 - `/data`（命名卷 `tefnut-data`）— SQLite 数据库、缩略图、页面缓存，容器重建后仍保留；容器以非-root 用户运行，命名卷权限自动就绪。
 - `8086` — Web 端口（在生成的 `docker-compose.yml` 里可改端口映射）。
 - `TZ` — 定时扫描按此时区触发（如 `Asia/Shanghai`）。
+- `TEFNUT_CACHE_MAX_BYTES` — 解压缓存（`/data/cache`）上限，默认 `2GiB`；接受字节数或 `512MiB`/`2GiB` 写法，`0` 为不限制。每次扫描后按最旧优先整本淘汰。
+- `TEFNUT_THUMB_PAGES_MAX_BYTES` — 页缩略图（`/data/thumbs/pages`）上限，默认 `512MiB`，规则同上。
 
 **从源码构建**（不拉镜像）：`git clone` 后本地构建并打上镜像 tag，`rainmaker` 便会直接用本地镜像：
 
@@ -65,4 +74,4 @@ docker build -t ghcr.io/aki-liang/tefnut:latest .
 ./rainmaker ~/comics
 ```
 
-> 首次扫描包含大量大 PDF 时，会把每本的页面抽取到 `/data` 缓存（占磁盘、需要时间），这是抽取式缓存的预期行为。
+> 扫描只读取每本的封面和页数，不会整本解压；PDF/MOBI/RAR/7z 的页面在**首次阅读**时才抽取到 `/data` 缓存，并受上面的缓存上限约束。

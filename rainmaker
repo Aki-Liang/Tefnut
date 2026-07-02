@@ -61,6 +61,24 @@ done
 DTZ="$(detect_tz)"
 TZ_VAL="$(ask "时区 [$DTZ]: " "$DTZ")"
 
+# --- disk budgets (scan-time eviction; 0 = unlimited) ---
+# Pre-set TEFNUT_CACHE_MAX_BYTES / TEFNUT_THUMB_PAGES_MAX_BYTES in the caller
+# environment to change the defaults (and to run non-interactively).
+size_ok() { printf '%s' "$1" | grep -qiE '^[0-9]+ ?(b|[kmgt]i?b?)?$'; }
+ask_size() { # $1 prompt-label  $2 default -> answer on stdout
+  local v=""
+  while :; do
+    v="$(ask "$1 [$2]: " "$2")"
+    size_ok "$v" && { printf '%s' "$v"; return; }
+    err "格式：数字+可选单位，如 2GiB / 512MiB / 0（0=不限制）。"
+    # No terminal, or the (possibly env-supplied) default came back — bail
+    # instead of re-prompting forever. set -e aborts on the failed $(...).
+    { [ -z "$TTY" ] || [ "$v" = "$2" ]; } && exit 1
+  done
+}
+CACHE_MAX="$(ask_size '解压缓存上限（漫画页缓存）' "${TEFNUT_CACHE_MAX_BYTES:-2GiB}")"
+PTHUMB_MAX="$(ask_size '页缩略图缓存上限' "${TEFNUT_THUMB_PAGES_MAX_BYTES:-512MiB}")"
+
 # --- generate docker-compose.yml (values baked in) ---
 # printf (not a heredoc) so the user-supplied path/TZ are written literally
 # and never re-parsed by the shell (no $ / backtick expansion).
@@ -76,6 +94,8 @@ TZ_VAL="$(ask "时区 [$DTZ]: " "$DTZ")"
   printf '      - tefnut-data:/data\n'
   printf '    environment:\n'
   printf '      - TZ=%s\n' "$TZ_VAL"
+  printf '      - TEFNUT_CACHE_MAX_BYTES=%s\n' "$CACHE_MAX"
+  printf '      - TEFNUT_THUMB_PAGES_MAX_BYTES=%s\n' "$PTHUMB_MAX"
   printf '    restart: unless-stopped\n'
   printf 'volumes:\n'
   printf '  tefnut-data:\n'

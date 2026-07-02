@@ -125,6 +125,19 @@ func (r *NodeRepo) UpdateFileAttrs(ctx context.Context, id, size, mtime int64, p
 	return nil
 }
 
+// UpdatePageCount repairs page_count when the served page list turns out to
+// differ from the scan-time estimate (e.g. pdf document pages vs actually
+// renderable images).
+func (r *NodeRepo) UpdatePageCount(ctx context.Context, id int64, pageCount int) error {
+	_, err := r.wdb.ExecContext(ctx,
+		`UPDATE nodes SET page_count=?, updated_at=? WHERE id=?`,
+		pageCount, time.Now().Unix(), id)
+	if err != nil {
+		return fmt.Errorf("store: update page count %d: %w", id, err)
+	}
+	return nil
+}
+
 func (r *NodeRepo) UpdateName(ctx context.Context, id int64, name string) error {
 	_, err := r.wdb.ExecContext(ctx,
 		`UPDATE nodes SET name=?, updated_at=? WHERE id=?`, name, time.Now().Unix(), id)

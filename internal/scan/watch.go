@@ -71,11 +71,9 @@ func (m *Manager) startWatchLocked(ctx context.Context) error {
 		addTree(lib.Path)
 	}
 
-	deb := newDebouncer(m.debounce, func() {
-		if err := m.runScan(ctx); err != nil {
-			log.Printf("scan: watch-triggered scan: %v", err)
-		}
-	})
+	// Route through ScanNow (guarded) so a watch-triggered scan never overlaps
+	// an in-flight scan — notably the initial background scan started by Start.
+	deb := newDebouncer(m.debounce, func() { m.ScanNow() })
 
 	done := make(chan struct{})
 	go func() {

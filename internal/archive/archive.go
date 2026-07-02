@@ -36,27 +36,8 @@ func Open(ctx context.Context, archivePath, cacheDir string) (Reader, error) {
 	}
 }
 
-// FirstImage opens the archive and returns the first image entry reader,
-// its name, and the total image count.
-func FirstImage(ctx context.Context, archivePath, cacheDir string) (io.ReadCloser, string, int, error) {
-	r, err := Open(ctx, archivePath, cacheDir)
-	if err != nil {
-		return nil, "", 0, err
-	}
-	names := r.List()
-	if len(names) == 0 {
-		r.Close()
-		return nil, "", 0, fmt.Errorf("archive: %s has no images", archivePath)
-	}
-	rc, err := r.Open(names[0])
-	if err != nil {
-		r.Close()
-		return nil, "", 0, err
-	}
-	// Wrap so closing the page reader also closes the archive.
-	return &closer{rc: rc, also: r}, names[0], len(names), nil
-}
-
+// closer wraps an entry reader so closing it also closes the archive it came
+// from (used by Probe's random-access path).
 type closer struct {
 	rc   io.ReadCloser
 	also Reader

@@ -214,3 +214,22 @@ func TestListChildrenPagination(t *testing.T) {
 		t.Fatalf("all len = %d, want 5", len(all))
 	}
 }
+
+func TestUpdatePageCount(t *testing.T) {
+	r := NewNodeRepo(openTemp(t))
+	n := mkNode(t, r, 0, "c.pdf", "/lib/c.pdf", NodeComic)
+	if err := r.UpdatePageCount(context.Background(), n.ID, 42); err != nil {
+		t.Fatalf("UpdatePageCount: %v", err)
+	}
+	got, err := r.Get(context.Background(), n.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.PageCount != 42 {
+		t.Errorf("page count = %d, want 42", got.PageCount)
+	}
+	// other fields untouched
+	if got.Name != "c.pdf" || got.Path != "/lib/c.pdf" {
+		t.Errorf("unrelated fields changed: %+v", got)
+	}
+}

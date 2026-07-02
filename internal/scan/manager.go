@@ -21,12 +21,18 @@ type Scanner interface {
 	Scan(ctx context.Context) error
 }
 
+// Budgets caps the scan-refreshed disk caches; a field <= 0 disables that cap.
+type Budgets struct {
+	ExtractCacheBytes int64 // data/cache — extracted-archive page dirs
+	PageThumbBytes    int64 // data/thumbs/pages — per-comic page-thumbnail dirs
+}
+
 type Manager struct {
-	scanner       Scanner
-	settings      *store.SettingsRepo
-	paths         *store.LibraryPathRepo
-	dataDir       string
-	cacheMaxBytes int64
+	scanner  Scanner
+	settings *store.SettingsRepo
+	paths    *store.LibraryPathRepo
+	dataDir  string
+	budgets  Budgets
 
 	mu       sync.Mutex
 	baseCtx  context.Context
@@ -36,14 +42,14 @@ type Manager struct {
 	scanning bool // guarded by mu; true while a ScanNow scan is in flight
 }
 
-func New(sc Scanner, settings *store.SettingsRepo, paths *store.LibraryPathRepo, dataDir string, cacheMaxBytes int64) *Manager {
+func New(sc Scanner, settings *store.SettingsRepo, paths *store.LibraryPathRepo, dataDir string, budgets Budgets) *Manager {
 	return &Manager{
-		scanner:       sc,
-		settings:      settings,
-		paths:         paths,
-		dataDir:       dataDir,
-		cacheMaxBytes: cacheMaxBytes,
-		debounce:      3 * time.Second,
+		scanner:  sc,
+		settings: settings,
+		paths:    paths,
+		dataDir:  dataDir,
+		budgets:  budgets,
+		debounce: 3 * time.Second,
 	}
 }
 
@@ -51,24 +57,45 @@ func (m *Manager) runScan(ctx context.Context) error {
 	if err := m.scanner.Scan(ctx); err != nil {
 		return err
 	}
-	if n, err := cache.Enforce(filepath.Join(m.dataDir, "cache"), m.cacheMaxBytes); err != nil {
-		log.Printf("scan: enforce cache budget: %v", err)
-	} else if n > 0 {
-		log.Printf("scan: evicted %d cached extract dir(s)", n)
-	}
+	m.enforceBudgets()
 	return nil
 }
 
-// Start runs one blocking scan, then starts the active mode.
+// enforceBudgets bounds the scan-refreshed disk caches, evicting whole
+// per-comic subdirectories oldest-modified first (see cache.Enforce).
+func (m *Manager) enforceBudgets() {
+	caps := []struct {
+		root string
+		max  int64
+		what string
+	}{
+		{filepath.Join(m.dataDir, "cache"), m.budgets.ExtractCacheBytes, "extract"},
+		{filepath.Join(m.dataDir, "thumbs", "pages"), m.budgets.PageThumbBytes, "page-thumb"},
+	}
+	for _, c := range caps {
+		if n, err := cache.Enforce(c.root, c.max); err != nil {
+			log.Printf("scan: enforce %s budget: %v", c.what, err)
+		} else if n > 0 {
+			log.Printf("scan: evicted %d %s dir(s)", n, c.what)
+		}
+	}
+}
+
+// Start applies the configured scan mode, then kicks the initial scan in the
+// background. The initial scan must NOT block startup: a large first-run library
+// can take minutes to extract every cover, and the HTTP server (started by the
+// caller after Start returns) has to come up immediately. ScanNow's in-flight
+// guard keeps this initial scan from overlapping a scheduled or manual one.
 func (m *Manager) Start(ctx context.Context) error {
 	m.mu.Lock()
 	m.baseCtx = ctx
 	m.mu.Unlock()
 
-	if err := m.runScan(ctx); err != nil {
-		log.Printf("scan: initial scan: %v", err)
+	if err := m.applyMode(); err != nil {
+		return err
 	}
-	return m.applyMode()
+	m.ScanNow()
+	return nil
 }
 
 // baseContext returns the long-lived context set by Start, or context.Background() as fallback.
@@ -104,7 +131,7 @@ func (m *Manager) ScanNow() bool {
 			m.mu.Unlock()
 		}()
 		if err := m.runScan(base); err != nil {
-			log.Printf("scan: manual scan: %v", err)
+			log.Printf("scan: background scan: %v", err)
 		}
 	}()
 	return true
@@ -164,11 +191,9 @@ func (m *Manager) applyMode() error {
 			return err
 		}
 		c := cron.New()
-		if _, err := c.AddFunc(spec, func() {
-			if err := m.runScan(base); err != nil {
-				log.Printf("scan: scheduled scan: %v", err)
-			}
-		}); err != nil {
+		// Route through ScanNow (guarded) so a scheduled scan never overlaps an
+		// in-flight one (e.g. the initial background scan on a very short interval).
+		if _, err := c.AddFunc(spec, func() { m.ScanNow() }); err != nil {
 			return fmt.Errorf("scan: schedule %q: %w", spec, err)
 		}
 		c.Start()

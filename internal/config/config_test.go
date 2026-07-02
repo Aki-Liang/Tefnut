@@ -93,3 +93,80 @@ func TestLoadAbsResolvesAllowedRoots(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadPageThumbBudget(t *testing.T) {
+	// default when unset
+	p := writeTemp(t, "dataDir: "+t.TempDir())
+	cfg, err := Load(p)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Thumbnail.PagesMaxBytes != 512<<20 {
+		t.Errorf("default pagesMaxBytes = %d, want %d", cfg.Thumbnail.PagesMaxBytes, 512<<20)
+	}
+	// yaml override
+	p = writeTemp(t, "dataDir: "+t.TempDir()+"\nthumbnail:\n  pagesMaxBytes: 1048576")
+	cfg, err = Load(p)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Thumbnail.PagesMaxBytes != 1<<20 {
+		t.Errorf("pagesMaxBytes = %d, want %d", cfg.Thumbnail.PagesMaxBytes, 1<<20)
+	}
+}
+
+func TestEnvOverridesBudgets(t *testing.T) {
+	p := writeTemp(t, "dataDir: "+t.TempDir()+"\ncache:\n  maxBytes: 1\nthumbnail:\n  pagesMaxBytes: 1")
+	t.Setenv("TEFNUT_CACHE_MAX_BYTES", "1GiB")
+	t.Setenv("TEFNUT_THUMB_PAGES_MAX_BYTES", "64MiB")
+	cfg, err := Load(p)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Cache.MaxBytes != 1<<30 {
+		t.Errorf("cache.maxBytes = %d, want %d (env must beat yaml)", cfg.Cache.MaxBytes, int64(1<<30))
+	}
+	if cfg.Thumbnail.PagesMaxBytes != 64<<20 {
+		t.Errorf("thumbnail.pagesMaxBytes = %d, want %d (env must beat yaml)", cfg.Thumbnail.PagesMaxBytes, int64(64<<20))
+	}
+}
+
+func TestEnvOverrideRejectsGarbage(t *testing.T) {
+	p := writeTemp(t, "dataDir: "+t.TempDir())
+	t.Setenv("TEFNUT_CACHE_MAX_BYTES", "lots")
+	if _, err := Load(p); err == nil {
+		t.Fatal("expected error for unparseable size")
+	}
+}
+
+func TestParseSize(t *testing.T) {
+	cases := []struct {
+		in   string
+		want int64
+		err  bool
+	}{
+		{"0", 0, false},
+		{"123", 123, false},
+		{"2GiB", 2 << 30, false},
+		{"512MiB", 512 << 20, false},
+		{"1gb", 1 << 30, false},
+		{"10k", 10 << 10, false},
+		{"4TiB", 4 << 40, false},
+		{" 8 MiB ", 8 << 20, false},
+		{"", 0, true},
+		{"-1", 0, true},
+		{"1.5G", 0, true},
+		{"1XB", 0, true},
+		{"999999999999GiB", 0, true}, // overflow
+	}
+	for _, c := range cases {
+		got, err := parseSize(c.in)
+		if c.err != (err != nil) {
+			t.Errorf("parseSize(%q): err = %v, want err=%v", c.in, err, c.err)
+			continue
+		}
+		if !c.err && got != c.want {
+			t.Errorf("parseSize(%q) = %d, want %d", c.in, got, c.want)
+		}
+	}
+}
