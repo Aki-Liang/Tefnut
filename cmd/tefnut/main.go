@@ -21,7 +21,7 @@ func main() {
 	cfgPath := flag.String("config", "./config.yaml", "path to config.yaml")
 	flag.Parse()
 
-	cfg, err := config.Load(*cfgPath)
+	cfg, err := config.LoadOrInit(*cfgPath)
 	if err != nil {
 		log.Fatal(err)
 	}
