@@ -32,7 +32,7 @@ type Manager struct {
 	settings *store.SettingsRepo
 	paths    *store.LibraryPathRepo
 	dataDir  string
-	budgets  Budgets
+	defaults Budgets
 
 	mu       sync.Mutex
 	baseCtx  context.Context
@@ -48,7 +48,7 @@ func New(sc Scanner, settings *store.SettingsRepo, paths *store.LibraryPathRepo,
 		settings: settings,
 		paths:    paths,
 		dataDir:  dataDir,
-		budgets:  budgets,
+		defaults: budgets,
 		debounce: 3 * time.Second,
 	}
 }
@@ -62,15 +62,25 @@ func (m *Manager) runScan(ctx context.Context) error {
 }
 
 // enforceBudgets bounds the scan-refreshed disk caches, evicting whole
-// per-comic subdirectories oldest-modified first (see cache.Enforce).
+// per-comic subdirectories oldest-modified first (see cache.Enforce). The
+// effective budgets are read per run: values saved on the settings page (DB)
+// win over the startup defaults (config file / env).
 func (m *Manager) enforceBudgets() {
+	cacheMax, pageThumbMax, err := m.settings.GetBudgets(
+		m.baseContext(), m.defaults.ExtractCacheBytes, m.defaults.PageThumbBytes)
+	if err != nil {
+		// Refuse to sweep with unknown budgets: skipping is safe (retried next
+		// scan); evicting against a wrong limit is not.
+		log.Printf("scan: read budgets: %v (skipping cache sweep)", err)
+		return
+	}
 	caps := []struct {
 		root string
 		max  int64
 		what string
 	}{
-		{filepath.Join(m.dataDir, "cache"), m.budgets.ExtractCacheBytes, "extract"},
-		{filepath.Join(m.dataDir, "thumbs", "pages"), m.budgets.PageThumbBytes, "page-thumb"},
+		{filepath.Join(m.dataDir, "cache"), cacheMax, "extract"},
+		{filepath.Join(m.dataDir, "thumbs", "pages"), pageThumbMax, "page-thumb"},
 	}
 	for _, c := range caps {
 		if n, err := cache.Enforce(c.root, c.max); err != nil {
