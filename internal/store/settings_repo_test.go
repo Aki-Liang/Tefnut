@@ -36,3 +36,40 @@ func TestSetGetScan(t *testing.T) {
 		t.Fatalf("mode = %s", got.Mode)
 	}
 }
+
+func TestGetBudgetsFallsBackToDefaults(t *testing.T) {
+	r := NewSettingsRepo(openTemp(t))
+	cache, thumb, err := r.GetBudgets(context.Background(), 111, 222)
+	if err != nil {
+		t.Fatalf("GetBudgets: %v", err)
+	}
+	if cache != 111 || thumb != 222 {
+		t.Errorf("got %d/%d, want defaults 111/222", cache, thumb)
+	}
+}
+
+func TestSetBudgetsRoundTrip(t *testing.T) {
+	r := NewSettingsRepo(openTemp(t))
+	if err := r.SetBudgets(context.Background(), 1<<30, 64<<20); err != nil {
+		t.Fatalf("SetBudgets: %v", err)
+	}
+	cache, thumb, err := r.GetBudgets(context.Background(), 111, 222)
+	if err != nil {
+		t.Fatalf("GetBudgets: %v", err)
+	}
+	if cache != 1<<30 || thumb != 64<<20 {
+		t.Errorf("got %d/%d, want saved values (DB must beat defaults)", cache, thumb)
+	}
+}
+
+func TestGetBudgetsRejectsCorruptValue(t *testing.T) {
+	db := openTemp(t)
+	r := NewSettingsRepo(db)
+	if _, err := db.Write().Exec(
+		`INSERT INTO settings (key, value) VALUES ('cache_max_bytes', 'garbage')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := r.GetBudgets(context.Background(), 1, 2); err == nil {
+		t.Fatal("expected error for non-numeric stored value, got nil (must not silently fall back)")
+	}
+}
