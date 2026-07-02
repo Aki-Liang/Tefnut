@@ -73,3 +73,19 @@ func TestGetBudgetsRejectsCorruptValue(t *testing.T) {
 		t.Fatal("expected error for non-numeric stored value, got nil (must not silently fall back)")
 	}
 }
+
+func TestGetBudgetsMixedStoredAndDefault(t *testing.T) {
+	db := openTemp(t)
+	r := NewSettingsRepo(db)
+	if _, err := db.Write().Exec(
+		`INSERT INTO settings (key, value) VALUES ('cache_max_bytes', '4096')`); err != nil {
+		t.Fatal(err)
+	}
+	cache, thumb, err := r.GetBudgets(context.Background(), 111, 222)
+	if err != nil {
+		t.Fatalf("GetBudgets: %v", err)
+	}
+	if cache != 4096 || thumb != 222 {
+		t.Errorf("got %d/%d, want stored 4096 + default 222", cache, thumb)
+	}
+}

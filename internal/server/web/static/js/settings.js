@@ -110,7 +110,6 @@ function setSize(numEl, unitEl, bytes) {
   const unit = (bytes > 0 && bytes % GiB === 0) ? GiB : MiB;
   unitEl.value = String(unit);
   numEl.value = String(bytes > 0 ? Math.ceil(bytes / unit) : 0);
-  unitEl.dispatchEvent(new Event('change', { bubbles: true })); // sync themed dropdown label
 }
 setSize(cacheNum, cacheUnit, Number(cd.cacheMax || 0));
 setSize(pthumbNum, pthumbUnit, Number(cd.pthumbMax || 0));

@@ -67,6 +67,9 @@ TEFNUT_CACHE_MAX_BYTES=4GiB TEFNUT_THUMB_PAGES_MAX_BYTES=1GiB \
 - `/data`（命名卷 `tefnut-data`）— SQLite 数据库、缩略图、页面缓存，容器重建后仍保留；容器以非-root 用户运行，命名卷权限自动就绪。
 - `8086` — Web 端口（在生成的 `docker-compose.yml` 里可改端口映射）。
 - `TZ` — 定时扫描按此时区触发（如 `Asia/Shanghai`）。
+
+> **从旧版本升级**：镜像的配置路径已从 `/etc/tefnut/config.yaml` 迁移到 `/config/config.yaml`。若你此前把自定义配置挂载到 `/etc/tefnut/config.yaml`，请把它移到 `./config/config.yaml` 并挂载 `./config:/config`；仅用 rainmaker/环境变量的部署无需处理。
+
 - `TEFNUT_CACHE_MAX_BYTES` — 解压缓存（`/data/cache`）上限，默认 `2GiB`；接受字节数或 `512MiB`/`2GiB` 写法，`0` 为不限制。每次扫描后按最旧优先整本淘汰。设置页保存过的值优先于 env 与配置文件。
 - `TEFNUT_THUMB_PAGES_MAX_BYTES` — 页缩略图（`/data/thumbs/pages`）上限，默认 `512MiB`，规则同上。设置页保存过的值优先于 env 与配置文件。
 
