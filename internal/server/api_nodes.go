@@ -134,6 +134,16 @@ func (s *Server) openPage(ctx context.Context, n *store.Node, pageNum int) (io.R
 		return nil, "", nil, err
 	}
 	names := r.List()
+	// The scan-time page count is a cheap estimate for some formats (PDF:
+	// document pages vs renderable images). The open archive knows the truth;
+	// repair the stored count once so the reader UI and progress bounds match
+	// from the next load on. Best-effort: a failed write just retries on a
+	// later read.
+	if len(names) > 0 && n.PageCount != len(names) {
+		if err := s.nodes.UpdatePageCount(ctx, n.ID, len(names)); err != nil {
+			log.Printf("server: reconcile page count %d: %v", n.ID, err)
+		}
+	}
 	if pageNum < 0 || pageNum >= len(names) {
 		release()
 		return nil, "", nil, errPageRange
