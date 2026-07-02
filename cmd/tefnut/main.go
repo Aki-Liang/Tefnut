@@ -49,8 +49,8 @@ func main() {
 	scanner := library.NewScanner(nodes, pathRepo, cfg.DataDir, cfg.Thumbnail.Width)
 
 	manager := scan.New(scanner, settingsRepo, pathRepo, cfg.DataDir, scan.Budgets{
-		ExtractCacheBytes: cfg.Cache.MaxBytes,
-		PageThumbBytes:    cfg.Thumbnail.PagesMaxBytes,
+		ExtractCacheBytes: int64(cfg.Cache.MaxBytes),
+		PageThumbBytes:    int64(cfg.Thumbnail.PagesMaxBytes),
 	})
 	if err := manager.Start(context.Background()); err != nil {
 		log.Printf("scan manager start: %v", err)
