@@ -71,7 +71,7 @@ func TestCronSpec(t *testing.T) {
 func TestStartRunsInitialScan(t *testing.T) {
 	settings, paths := newRepos(t)
 	fs := &fakeScanner{ch: make(chan struct{}, 1)}
-	m := New(fs, settings, paths, t.TempDir(), 0)
+	m := New(fs, settings, paths, t.TempDir(), Budgets{})
 	if err := m.Start(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -92,7 +92,7 @@ func TestStartDoesNotBlockOnInitialScan(t *testing.T) {
 	defer close(block) // release the background initial scan on exit
 	fs := &fakeScanner{ch: make(chan struct{}, 1)}
 	fs.setBlock(block) // the initial scan blocks until released
-	m := New(fs, settings, paths, t.TempDir(), 0)
+	m := New(fs, settings, paths, t.TempDir(), Budgets{})
 	defer m.Stop()
 
 	done := make(chan error, 1)
@@ -117,7 +117,7 @@ func TestStartDoesNotBlockOnInitialScan(t *testing.T) {
 func TestReconfigureTriggersScan(t *testing.T) {
 	settings, paths := newRepos(t)
 	fs := &fakeScanner{ch: make(chan struct{}, 4)}
-	m := New(fs, settings, paths, t.TempDir(), 0)
+	m := New(fs, settings, paths, t.TempDir(), Budgets{})
 	m.Start(context.Background())
 	defer m.Stop()
 	<-fs.ch // initial
@@ -135,7 +135,7 @@ func TestReconfigureTriggersScan(t *testing.T) {
 func TestReconfigureUsesBaseContextNotRequestContext(t *testing.T) {
 	settings, paths := newRepos(t)
 	fs := &fakeScanner{ch: make(chan struct{}, 4)}
-	m := New(fs, settings, paths, t.TempDir(), 0)
+	m := New(fs, settings, paths, t.TempDir(), Budgets{})
 	m.Start(context.Background())
 	defer m.Stop()
 	<-fs.ch // initial scan
@@ -156,7 +156,7 @@ func TestReconfigureUsesBaseContextNotRequestContext(t *testing.T) {
 func TestScanNowGuard(t *testing.T) {
 	settings, paths := newRepos(t)
 	fs := &fakeScanner{}
-	m := New(fs, settings, paths, t.TempDir(), 0)
+	m := New(fs, settings, paths, t.TempDir(), Budgets{})
 
 	block := make(chan struct{})
 	fs.setBlock(block)

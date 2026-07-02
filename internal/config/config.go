@@ -24,8 +24,9 @@ type Scan struct {
 }
 
 type Thumbnail struct {
-	Width     int `yaml:"width"`
-	PageWidth int `yaml:"pageWidth"`
+	Width         int   `yaml:"width"`
+	PageWidth     int   `yaml:"pageWidth"`
+	PagesMaxBytes int64 `yaml:"pagesMaxBytes"` // budget for data/thumbs/pages; <=0 disables eviction
 }
 
 type Cache struct {
@@ -46,7 +47,7 @@ func defaults() *Config {
 		DataDir:   "./data",
 		Server:    Server{Addr: ":8086"},
 		Scan:      Scan{Interval: "1h"},
-		Thumbnail: Thumbnail{Width: 400, PageWidth: 120},
+		Thumbnail: Thumbnail{Width: 400, PageWidth: 120, PagesMaxBytes: 512 << 20},
 		Cache:     Cache{MaxBytes: 2 << 30},
 	}
 }
@@ -60,6 +61,9 @@ func Load(path string) (*Config, error) {
 	}
 	if err := yaml.Unmarshal(raw, cfg); err != nil {
 		return nil, fmt.Errorf("config: parse %s: %w", path, err)
+	}
+	if err := cfg.applyEnv(); err != nil {
+		return nil, err
 	}
 	if err := cfg.validate(); err != nil {
 		return nil, err
