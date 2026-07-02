@@ -54,18 +54,21 @@ TEFNUT_CACHE_MAX_BYTES=4GiB TEFNUT_THUMB_PAGES_MAX_BYTES=1GiB \
   curl -fsSL https://raw.githubusercontent.com/Aki-Liang/Tefnut/main/rainmaker | bash -s -- ~/comics
 ```
 
+缓存上限也可启动后在「设置」页修改，保存即生效。
+
 镜像发布在 GHCR：`ghcr.io/aki-liang/tefnut`（公开可拉，支持 `linux/amd64` 和 `linux/arm64`）。启动后浏览器打开 `http://<主机IP>:8086`。
 
 > 默认定时扫描间隔为 **1 小时**（可在「设置」页调整）。
 
 **卷与端口：**
 
+- `/config`（挂载 `./config`）— `config.yaml` 所在；首次启动自动生成带注释模板，宿主机直接编辑，`docker compose restart` 生效。
 - `/comics`（只读）— 你的漫画库；Tefnut 从不写入。
 - `/data`（命名卷 `tefnut-data`）— SQLite 数据库、缩略图、页面缓存，容器重建后仍保留；容器以非-root 用户运行，命名卷权限自动就绪。
 - `8086` — Web 端口（在生成的 `docker-compose.yml` 里可改端口映射）。
 - `TZ` — 定时扫描按此时区触发（如 `Asia/Shanghai`）。
-- `TEFNUT_CACHE_MAX_BYTES` — 解压缓存（`/data/cache`）上限，默认 `2GiB`；接受字节数或 `512MiB`/`2GiB` 写法，`0` 为不限制。每次扫描后按最旧优先整本淘汰。
-- `TEFNUT_THUMB_PAGES_MAX_BYTES` — 页缩略图（`/data/thumbs/pages`）上限，默认 `512MiB`，规则同上。
+- `TEFNUT_CACHE_MAX_BYTES` — 解压缓存（`/data/cache`）上限，默认 `2GiB`；接受字节数或 `512MiB`/`2GiB` 写法，`0` 为不限制。每次扫描后按最旧优先整本淘汰。设置页保存过的值优先于 env 与配置文件。
+- `TEFNUT_THUMB_PAGES_MAX_BYTES` — 页缩略图（`/data/thumbs/pages`）上限，默认 `512MiB`，规则同上。设置页保存过的值优先于 env 与配置文件。
 
 **从源码构建**（不拉镜像）：`git clone` 后本地构建并打上镜像 tag，`rainmaker` 便会直接用本地镜像：
 
