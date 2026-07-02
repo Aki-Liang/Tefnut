@@ -86,20 +86,3 @@ func TestWithinDir(t *testing.T) {
 		t.Error("traversal entry must be rejected")
 	}
 }
-
-func TestFirstImage(t *testing.T) {
-	dir := t.TempDir()
-	zp := makeZip(t, dir, "c.zip", map[string]string{"2.jpg": "two", "1.jpg": "one"})
-	rc, name, count, err := FirstImage(context.Background(), zp, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rc.Close()
-	if name != "1.jpg" || count != 2 {
-		t.Fatalf("name=%q count=%d", name, count)
-	}
-	b, _ := io.ReadAll(rc)
-	if string(b) != "one" {
-		t.Fatalf("got %q", b)
-	}
-}

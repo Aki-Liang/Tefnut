@@ -180,7 +180,7 @@ func (s *Scanner) runBuilds(ctx context.Context, tasks []buildTask) {
 		go func() {
 			defer wg.Done()
 			for t := range ch {
-				s.buildComic(ctx, t.node, t.size, t.mtime)
+				s.safeBuild(ctx, t)
 			}
 		}()
 	}
@@ -189,6 +189,21 @@ func (s *Scanner) runBuilds(ctx context.Context, tasks []buildTask) {
 	}
 	close(ch)
 	wg.Wait()
+}
+
+// safeBuild shields the worker pool from decoder panics on malformed
+// archives: one comic's panic must mark that comic CoverFailed, never kill
+// the process (these goroutines have no other recover between them and main).
+func (s *Scanner) safeBuild(ctx context.Context, t buildTask) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("scanner: build %s panicked: %v", t.node.Path, r)
+			if err := s.repo.UpdateFileAttrs(ctx, t.node.ID, t.size, t.mtime, 0, store.CoverFailed); err != nil {
+				log.Printf("scanner: mark cover failed %d: %v", t.node.ID, err)
+			}
+		}
+	}()
+	s.buildComic(ctx, t.node, t.size, t.mtime)
 }
 
 func (s *Scanner) buildComic(ctx context.Context, node *store.Node, size, mtime int64) {
@@ -202,7 +217,7 @@ func (s *Scanner) buildComic(ctx context.Context, node *store.Node, size, mtime 
 		log.Printf("scanner: evict page thumbs %d: %v", node.ID, err)
 	}
 
-	rc, _, count, err := archive.FirstImage(ctx, node.Path, s.cacheDir(node.ID))
+	rc, count, err := archive.Probe(ctx, node.Path)
 	if err != nil {
 		log.Printf("scanner: first image %s: %v", node.Path, err)
 		s.repo.UpdateFileAttrs(ctx, node.ID, size, mtime, 0, store.CoverFailed)
