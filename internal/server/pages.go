@@ -172,9 +172,14 @@ func (s *Server) pageSettings(c echo.Context) error {
 	if err != nil {
 		return fail(c, http.StatusInternalServerError, err)
 	}
+	cacheMax, pageThumbMax, err := s.settings.GetBudgets(ctx, s.defCacheMax, s.defPageThumbMax)
+	if err != nil {
+		return fail(c, http.StatusInternalServerError, err)
+	}
 	return render(c, "settings.html", map[string]any{
 		"LibraryPaths": paths, "ScanMode": scan.Mode,
 		"ScanInterval": scan.Interval, "ScanDailyTime": scan.DailyTime,
+		"CacheMaxBytes": cacheMax, "ThumbPagesMaxBytes": pageThumbMax,
 	})
 }
 

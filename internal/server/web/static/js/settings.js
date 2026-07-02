@@ -96,3 +96,38 @@ scanNowBtn.addEventListener('click', () => {
     .catch(() => { scanNowStatus.textContent = '触发失败'; })
     .finally(() => { scanNowBtn.disabled = false; });
 });
+
+// ---- cache budgets: bytes <-> number + unit (MiB/GiB) ----
+const GiB = 1073741824, MiB = 1048576;
+const cd = document.getElementById('cache-data').dataset;
+const cacheNum = document.getElementById('cache-max');
+const cacheUnit = document.getElementById('cache-max-unit');
+const pthumbNum = document.getElementById('pthumb-max');
+const pthumbUnit = document.getElementById('pthumb-max-unit');
+
+// 整除 GiB 显示 GiB,否则 MiB(不整除时仅显示向上取整,存储不变)
+function setSize(numEl, unitEl, bytes) {
+  const unit = (bytes > 0 && bytes % GiB === 0) ? GiB : MiB;
+  unitEl.value = String(unit);
+  numEl.value = String(bytes > 0 ? Math.ceil(bytes / unit) : 0);
+  unitEl.dispatchEvent(new Event('change', { bubbles: true })); // sync themed dropdown label
+}
+setSize(cacheNum, cacheUnit, Number(cd.cacheMax || 0));
+setSize(pthumbNum, pthumbUnit, Number(cd.pthumbMax || 0));
+
+document.getElementById('cacheform').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const cache = Math.round(Number(cacheNum.value)) * Number(cacheUnit.value);
+  const pthumb = Math.round(Number(pthumbNum.value)) * Number(pthumbUnit.value);
+  if (!Number.isInteger(cache) || cache < 0 || !Number.isInteger(pthumb) || pthumb < 0) {
+    alert('缓存上限需为非负整数');
+    return;
+  }
+  fetch('/api/settings', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ cacheMaxBytes: cache, thumbPagesMaxBytes: pthumb })
+  }).then(r => {
+    if (!r.ok) { r.json().then(j => alert(j.message || '保存失败')).catch(() => alert('保存失败')); return; }
+    alert('已保存，已触发后台重扫，新上限随本次扫描生效');
+  }).catch(() => alert('保存失败'));
+});
