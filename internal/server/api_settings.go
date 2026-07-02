@@ -15,10 +15,12 @@ import (
 )
 
 type settingsDTO struct {
-	LibraryPaths  []*store.LibraryPath `json:"libraryPaths"`
-	ScanMode      string               `json:"scanMode"`
-	ScanInterval  string               `json:"scanInterval"`
-	ScanDailyTime string               `json:"scanDailyTime"`
+	LibraryPaths       []*store.LibraryPath `json:"libraryPaths"`
+	ScanMode           string               `json:"scanMode"`
+	ScanInterval       string               `json:"scanInterval"`
+	ScanDailyTime      string               `json:"scanDailyTime"`
+	CacheMaxBytes      int64                `json:"cacheMaxBytes"`
+	ThumbPagesMaxBytes int64                `json:"thumbPagesMaxBytes"`
 }
 
 func (s *Server) apiGetSettings(c echo.Context) error {
@@ -31,9 +33,14 @@ func (s *Server) apiGetSettings(c echo.Context) error {
 	if err != nil {
 		return fail(c, http.StatusInternalServerError, err)
 	}
+	cacheMax, pageThumbMax, err := s.settings.GetBudgets(ctx, s.defCacheMax, s.defPageThumbMax)
+	if err != nil {
+		return fail(c, http.StatusInternalServerError, err)
+	}
 	return ok(c, settingsDTO{
 		LibraryPaths: paths, ScanMode: scan.Mode,
 		ScanInterval: scan.Interval, ScanDailyTime: scan.DailyTime,
+		CacheMaxBytes: cacheMax, ThumbPagesMaxBytes: pageThumbMax,
 	})
 }
 
@@ -68,20 +75,50 @@ func validHHMM(v string) bool {
 func (s *Server) apiUpdateSettings(c echo.Context) error {
 	ctx := c.Request().Context()
 	var body struct {
-		ScanMode      string `json:"scanMode"`
-		ScanInterval  string `json:"scanInterval"`
-		ScanDailyTime string `json:"scanDailyTime"`
+		ScanMode           string `json:"scanMode"`
+		ScanInterval       string `json:"scanInterval"`
+		ScanDailyTime      string `json:"scanDailyTime"`
+		CacheMaxBytes      *int64 `json:"cacheMaxBytes"`
+		ThumbPagesMaxBytes *int64 `json:"thumbPagesMaxBytes"`
 	}
 	if err := c.Bind(&body); err != nil {
 		return fail(c, http.StatusBadRequest, err)
 	}
-	if err := validScanSettings(body.ScanMode, body.ScanInterval, body.ScanDailyTime); err != nil {
-		return fail(c, http.StatusBadRequest, err)
+	// Each group is optional: old clients send only scan fields, the cache
+	// form sends only budgets. Validate everything before writing anything.
+	if body.ScanMode != "" {
+		if err := validScanSettings(body.ScanMode, body.ScanInterval, body.ScanDailyTime); err != nil {
+			return fail(c, http.StatusBadRequest, err)
+		}
 	}
-	if err := s.settings.SetScan(ctx, store.ScanSettings{
-		Mode: body.ScanMode, Interval: body.ScanInterval, DailyTime: body.ScanDailyTime,
-	}); err != nil {
-		return fail(c, http.StatusInternalServerError, err)
+	if (body.CacheMaxBytes != nil && *body.CacheMaxBytes < 0) ||
+		(body.ThumbPagesMaxBytes != nil && *body.ThumbPagesMaxBytes < 0) {
+		return fail(c, http.StatusBadRequest, errors.New("缓存上限必须是 ≥ 0 的字节数（0 = 不限制）"))
+	}
+	if body.ScanMode != "" {
+		if err := s.settings.SetScan(ctx, store.ScanSettings{
+			Mode: body.ScanMode, Interval: body.ScanInterval, DailyTime: body.ScanDailyTime,
+		}); err != nil {
+			return fail(c, http.StatusInternalServerError, err)
+		}
+	}
+	if body.CacheMaxBytes != nil || body.ThumbPagesMaxBytes != nil {
+		// A partial body pins the omitted side to its current effective value
+		// so SetBudgets can atomically write both keys. The UI always sends both.
+		curCache, curThumb, err := s.settings.GetBudgets(ctx, s.defCacheMax, s.defPageThumbMax)
+		if err != nil {
+			return fail(c, http.StatusInternalServerError, err)
+		}
+		cacheMax, pageThumbMax := curCache, curThumb
+		if body.CacheMaxBytes != nil {
+			cacheMax = *body.CacheMaxBytes
+		}
+		if body.ThumbPagesMaxBytes != nil {
+			pageThumbMax = *body.ThumbPagesMaxBytes
+		}
+		if err := s.settings.SetBudgets(ctx, cacheMax, pageThumbMax); err != nil {
+			return fail(c, http.StatusInternalServerError, err)
+		}
 	}
 	if err := s.reconf.Reconfigure(ctx); err != nil {
 		return fail(c, http.StatusInternalServerError, err)

@@ -57,7 +57,9 @@ func main() {
 	}
 	defer manager.Stop()
 
-	srv := server.NewServer(nodes, tags, progress, settingsRepo, pathRepo, manager, cfg.DataDir, cfg.Thumbnail.Width, cfg.Thumbnail.PageWidth, cfg.Library.AllowedRoots)
+	srv := server.NewServer(nodes, tags, progress, settingsRepo, pathRepo, manager,
+		cfg.DataDir, cfg.Thumbnail.Width, cfg.Thumbnail.PageWidth, cfg.Library.AllowedRoots,
+		int64(cfg.Cache.MaxBytes), int64(cfg.Thumbnail.PagesMaxBytes))
 
 	e := echo.New()
 	e.HideBanner = true

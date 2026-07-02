@@ -21,26 +21,29 @@ type Reconfigurer interface {
 }
 
 type Server struct {
-	nodes          *store.NodeRepo
-	tags           *store.TagRepo
-	progress       *store.ProgressRepo
-	settings       *store.SettingsRepo
-	paths          *store.LibraryPathRepo
-	reconf         Reconfigurer
-	dataDir        string
-	thumbWidth     int
-	pageThumbWidth int
-	thumbs         *thumbCache
-	readers        *archive.ReaderCache
-	decodeSem      chan struct{}
-	allowedRoots   []string
+	nodes           *store.NodeRepo
+	tags            *store.TagRepo
+	progress        *store.ProgressRepo
+	settings        *store.SettingsRepo
+	paths           *store.LibraryPathRepo
+	reconf          Reconfigurer
+	dataDir         string
+	thumbWidth      int
+	pageThumbWidth  int
+	thumbs          *thumbCache
+	readers         *archive.ReaderCache
+	decodeSem       chan struct{}
+	allowedRoots    []string
+	defCacheMax     int64 // effective-budget fallback (config/env) for settings API
+	defPageThumbMax int64
 }
 
 const thumbCacheMaxEntries = 512
 
 func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.ProgressRepo,
 	settings *store.SettingsRepo, paths *store.LibraryPathRepo, reconf Reconfigurer,
-	dataDir string, thumbWidth int, pageThumbWidth int, allowedRoots []string) *Server {
+	dataDir string, thumbWidth int, pageThumbWidth int, allowedRoots []string,
+	defCacheMax, defPageThumbMax int64) *Server {
 	// lru.New only errors on size<=0; thumbCacheMaxEntries is a positive
 	// constant, so the ignored error is safe.
 	tc, _ := newThumbCache(thumbCacheMaxEntries, filepath.Join(dataDir, "thumbs"))
@@ -48,8 +51,10 @@ func NewServer(nodes *store.NodeRepo, tags *store.TagRepo, progress *store.Progr
 		paths: paths, reconf: reconf, dataDir: dataDir, thumbWidth: thumbWidth,
 		pageThumbWidth: pageThumbWidth,
 		thumbs:         tc, readers: archive.NewReaderCache(archiveCacheSize),
-		decodeSem:    make(chan struct{}, decodeConcurrency),
-		allowedRoots: allowedRoots}
+		decodeSem:       make(chan struct{}, decodeConcurrency),
+		allowedRoots:    allowedRoots,
+		defCacheMax:     defCacheMax,
+		defPageThumbMax: defPageThumbMax}
 }
 
 // Register wires routes and static assets onto e.
