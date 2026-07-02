@@ -15,10 +15,10 @@ type ScanSettings struct {
 }
 
 const (
-	keyScanMode       = "scan_mode"
-	keyScanInterval   = "scan_interval"
-	keyScanDaily      = "scan_daily_time"
-	keyCacheMaxBytes  = "cache_max_bytes"
+	keyScanMode           = "scan_mode"
+	keyScanInterval       = "scan_interval"
+	keyScanDaily          = "scan_daily_time"
+	keyCacheMaxBytes      = "cache_max_bytes"
 	keyThumbPagesMaxBytes = "thumb_pages_max_bytes"
 
 	defScanMode     = "interval"
