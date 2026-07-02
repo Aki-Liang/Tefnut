@@ -48,6 +48,7 @@ cache.Enforce(thumbs/pages/, b.PageThumbBytes)
   - 文件存在 → 等同 `Load`。
   - 不存在 → 写入 embedded 默认模板(0644,目录不存在则 MkdirAll)再 `Load`;写入失败(只读挂载等)→ 报错并指明路径与原因。
 - 模板(embedded 字符串,带中文注释):`library.rootPath: /comics`、`dataDir: /data`、`server.addr: ":8086"`、`thumbnail`(width/pageWidth/pagesMaxBytes)、`cache.maxBytes`;**不含 `scan:` 段**(该段从未接入运行时;Go 结构保留解析以兼容旧文件)。
+- 计划阶段补充决策:预算 yaml 字段升级为 `ByteSize` 类型(`UnmarshalYAML` 走 parseSize),**yaml 直接接受 `2GiB`/`512MiB` 写法**(纯数字字节仍兼容)。模板与 rainmaker 生成文件因此用后缀写法(人类友好),rainmaker 免去 shell 侧单位换算。
 - env 覆盖(`applyEnv`)逻辑不变,继续作用于 Load 产出的 defaults。
 
 ### 3. `internal/scan/manager.go`
