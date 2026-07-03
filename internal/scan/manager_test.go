@@ -182,3 +182,30 @@ func TestScanNowGuard(t *testing.T) {
 		t.Fatal("ScanNow should start again after the prior scan finished")
 	}
 }
+
+func TestScanningReflectsInFlight(t *testing.T) {
+	settings, paths := newRepos(t)
+	block := make(chan struct{})
+	fs := &fakeScanner{ch: make(chan struct{}, 1)}
+	fs.setBlock(block)
+	m := New(fs, settings, paths, t.TempDir(), Budgets{})
+	if m.Scanning() {
+		t.Fatal("no scan started yet, Scanning() must be false")
+	}
+	if !m.ScanNow() {
+		t.Fatal("ScanNow should start a scan")
+	}
+	<-fs.ch // scan is now inside Scan()
+	if !m.Scanning() {
+		t.Error("Scanning() must be true while a scan is in flight")
+	}
+	close(block)
+	deadline := time.After(2 * time.Second)
+	for m.Scanning() {
+		select {
+		case <-deadline:
+			t.Fatal("scan never finished")
+		case <-time.After(10 * time.Millisecond):
+		}
+	}
+}

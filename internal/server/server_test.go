@@ -19,12 +19,14 @@ import (
 )
 
 type stubReconf struct {
-	calls int
-	scans int
+	calls    int
+	scans    int
+	scanning bool
 }
 
 func (s *stubReconf) Reconfigure(ctx context.Context) error { s.calls++; return nil }
 func (s *stubReconf) ScanNow() bool                         { s.scans++; return true }
+func (s *stubReconf) Scanning() bool                        { return s.scanning }
 
 func newTestServer(t *testing.T) (*Server, *echo.Echo, *store.DB) {
 	t.Helper()

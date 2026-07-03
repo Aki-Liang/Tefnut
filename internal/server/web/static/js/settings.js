@@ -130,3 +130,22 @@ document.getElementById('cacheform').addEventListener('submit', (e) => {
     alert('已保存，已触发后台重扫，新上限随本次扫描生效');
   }).catch(() => alert('保存失败'));
 });
+
+// ---- one-click cache clear ----
+const clearBtn = document.getElementById('cache-clear');
+const clearStatus = document.getElementById('cache-clear-status');
+function fmtBytes(n) {
+  if (n >= GiB) return (n / GiB).toFixed(1) + ' GiB';
+  if (n >= MiB) return (n / MiB).toFixed(1) + ' MiB';
+  return n + ' B';
+}
+clearBtn.addEventListener('click', () => {
+  if (!confirm('清空解压缓存与页缩略图？封面不受影响；正在阅读的漫画会在下次翻页时自动重新解压。')) return;
+  clearBtn.disabled = true;
+  clearStatus.textContent = '清理中…';
+  fetch('/api/cache/clear', { method: 'POST' })
+    .then((r) => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+    .then((j) => { clearStatus.textContent = '已清理 ' + fmtBytes((j.data && j.data.freedBytes) || 0); })
+    .catch(() => { clearStatus.textContent = '清理失败'; })
+    .finally(() => { clearBtn.disabled = false; });
+});
