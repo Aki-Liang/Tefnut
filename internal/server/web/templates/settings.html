@@ -52,7 +52,7 @@
     <button type="submit" form="cacheform">保存</button>
   </div>
   <form id="cacheform" class="scanform">
-    <div class="mode-row">
+    <div class="budget-row">
       <label for="cache-max">解压缓存上限</label>
       <input id="cache-max" type="number" min="0" step="1" autocomplete="off">
       <select id="cache-max-unit" title="单位">
@@ -60,7 +60,7 @@
         <option value="1073741824">GiB</option>
       </select>
     </div>
-    <div class="mode-row">
+    <div class="budget-row">
       <label for="pthumb-max">页缩略图上限</label>
       <input id="pthumb-max" type="number" min="0" step="1" autocomplete="off">
       <select id="pthumb-max-unit" title="单位">
@@ -70,6 +70,10 @@
     </div>
     <small class="hint">0 = 不限制。超限时在每次扫描结束后按最旧优先整本清理。</small>
   </form>
+  <div class="cache-clear-row">
+    <button type="button" id="cache-clear" class="card-box-btn danger">立即清理</button>
+    <span id="cache-clear-status" class="hint"></span>
+  </div>
 </section>
 
 <div id="scan-data" data-mode="{{.ScanMode}}" data-interval="{{.ScanInterval}}" data-daily="{{.ScanDailyTime}}" hidden></div>

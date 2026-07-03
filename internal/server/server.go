@@ -18,6 +18,7 @@ const decodeConcurrency = 4
 type Reconfigurer interface {
 	Reconfigure(ctx context.Context) error
 	ScanNow() bool
+	Scanning() bool
 }
 
 type Server struct {
@@ -92,5 +93,6 @@ func (s *Server) Register(e *echo.Echo) {
 	api.DELETE("/settings/paths/:id", s.apiDeletePath)
 
 	api.POST("/scan", s.apiScanNow)
-
+	api.GET("/scan/status", s.apiScanStatus)
+	api.POST("/cache/clear", s.apiCacheClear)
 }

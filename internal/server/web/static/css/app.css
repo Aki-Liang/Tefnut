@@ -413,3 +413,32 @@ main.reader-main { margin-left: 0; padding: 0; height: 100vh; overflow: hidden; 
 .thumb-cell { display: block; border: 2px solid var(--line); border-radius: 3px; overflow: hidden; transition: border-color 0.12s ease; }
 .thumb-cell:hover { border-color: var(--seal); }
 .thumb-cell img { width: 100%; aspect-ratio: 2/3; object-fit: contain; background: var(--ink); display: block; }
+
+/* ============================================================
+   Cache tools + library scan button
+   ============================================================ */
+:root { --warn: #f87171; --warn-dim: #b95c5c; } /* danger accent, used with restraint */
+
+/* budget rows: label | number | unit dropdown on one line */
+.scanform .budget-row { display: flex; flex-direction: row; align-items: center; gap: 8px; }
+.scanform .budget-row label { min-width: 7.5em; }
+.scanform .budget-row input[type="number"] { width: 88px; }
+
+.cache-clear-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.card-box button.danger { color: var(--warn); border-color: var(--warn-dim); }
+.card-box button.danger:hover { border-color: var(--warn); }
+.card-box button.danger:disabled { opacity: 0.6; cursor: default; }
+
+/* library toolbar: filters left, scan button pinned right */
+.toolbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.scan-btn {
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer; white-space: nowrap;
+  background: var(--panel-2); color: var(--paper);
+  border: 2px solid var(--line); border-radius: 6px; padding: 9px 14px; font-size: 13px;
+  font-family: var(--font-display); letter-spacing: 0.04em; text-transform: uppercase;
+}
+.scan-btn:hover { border-color: var(--seal); color: var(--paper); }
+.scan-btn .scan-icon { width: 15px; height: 15px; display: block; }
+.scan-btn.spinning { opacity: 0.7; cursor: default; border-color: var(--seal-dim); }
+.scan-btn.spinning .scan-icon { animation: scan-spin 0.9s linear infinite; }
+@keyframes scan-spin { to { transform: rotate(360deg); } }

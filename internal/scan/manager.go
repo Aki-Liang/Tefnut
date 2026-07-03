@@ -147,6 +147,13 @@ func (m *Manager) ScanNow() bool {
 	return true
 }
 
+// Scanning reports whether a scan is currently in flight.
+func (m *Manager) Scanning() bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.scanning
+}
+
 // Reconfigure tears down the current mode, starts the mode from current
 // settings, then triggers an async rescan.
 // ctx is accepted for interface compatibility but must NOT be used for scan/scheduled work.
