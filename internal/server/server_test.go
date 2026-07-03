@@ -35,7 +35,8 @@ func newTestServer(t *testing.T) (*Server, *echo.Echo, *store.DB) {
 	}
 	t.Cleanup(func() { db.Close() })
 	s := NewServer(store.NewNodeRepo(db), store.NewTagRepo(db), store.NewProgressRepo(db),
-		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), &stubReconf{}, data, 400, 120, nil)
+		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), &stubReconf{}, data, 400, 120, nil,
+		1<<30, 64<<20)
 	e := echo.New()
 	s.Register(e)
 	return s, e, db
@@ -478,7 +479,8 @@ func TestSettingsUpdateTriggersReconfigure(t *testing.T) {
 	defer db.Close()
 	rc := &stubReconf{}
 	s := NewServer(store.NewNodeRepo(db), store.NewTagRepo(db), store.NewProgressRepo(db),
-		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), rc, data, 400, 120, nil)
+		store.NewSettingsRepo(db), store.NewLibraryPathRepo(db), rc, data, 400, 120, nil,
+		1<<30, 64<<20)
 	e := echo.New()
 	s.Register(e)
 	req := httptest.NewRequest(http.MethodPut, "/api/settings",

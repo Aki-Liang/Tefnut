@@ -24,13 +24,13 @@ type Scan struct {
 }
 
 type Thumbnail struct {
-	Width         int   `yaml:"width"`
-	PageWidth     int   `yaml:"pageWidth"`
-	PagesMaxBytes int64 `yaml:"pagesMaxBytes"` // budget for data/thumbs/pages; <=0 disables eviction
+	Width         int      `yaml:"width"`
+	PageWidth     int      `yaml:"pageWidth"`
+	PagesMaxBytes ByteSize `yaml:"pagesMaxBytes"` // budget for data/thumbs/pages; <=0 disables eviction
 }
 
 type Cache struct {
-	MaxBytes int64 `yaml:"maxBytes"`
+	MaxBytes ByteSize `yaml:"maxBytes"`
 }
 
 type Config struct {
