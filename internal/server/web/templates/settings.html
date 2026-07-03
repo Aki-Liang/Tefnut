@@ -10,7 +10,7 @@
     {{end}}
   </ul>
   <form id="addpath" class="row">
-    <input id="np-path" placeholder="库目录绝对路径，如 /Users/me/comic" autocomplete="off">
+    <button type="button" id="np-pick" class="pick-trigger empty">选择库目录…</button>
     <input id="np-name" placeholder="显示名（默认取末段）" autocomplete="off">
     <button>添加</button>
   </form>
@@ -79,4 +79,4 @@
 <div id="scan-data" data-mode="{{.ScanMode}}" data-interval="{{.ScanInterval}}" data-daily="{{.ScanDailyTime}}" hidden></div>
 <div id="cache-data" data-cache-max="{{.CacheMaxBytes}}" data-pthumb-max="{{.ThumbPagesMaxBytes}}" hidden></div>
 {{end}}
-{{define "scripts"}}<script src="/static/js/settings.js"></script>{{end}}
+{{define "scripts"}}<script src="/static/js/dirpicker.js"></script><script src="/static/js/settings.js"></script>{{end}}
