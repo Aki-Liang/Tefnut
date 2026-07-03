@@ -4,17 +4,19 @@
 
 ## 快速开始
 
-1. 编辑 `cmd/tefnut/config.yaml`（或复制一份放到二进制旁边）：
-   - `library.rootPath` — 你的漫画库目录
+1. 直接运行（配置文件不存在时会**自动生成带注释的模板**再退出提示）：
+   ```bash
+   go run ./cmd/tefnut -config ./config.yaml
+   ```
+2. 编辑生成的 `config.yaml`：
+   - `library.rootPath` — 你的漫画库目录（模板默认 `/comics`，本机运行改成实际路径）
    - `dataDir` — 数据库、缩略图、解压缓存的存放位置
    - `server.addr` — 监听地址（默认 `:8086`）
-   - `scan.interval` — 重新扫描周期（默认 `1h`）
-   - `thumbnail.width` — 封面宽度，像素（默认 `400`）
-2. 运行：
-   ```bash
-   go run ./cmd/tefnut -config ./cmd/tefnut/config.yaml
-   ```
-3. 打开 http://localhost:8086
+   - `thumbnail.width` / `pageWidth` — 封面 / 页缩略图宽度（像素）
+   - `cache.maxBytes` / `thumbnail.pagesMaxBytes` — 两个磁盘缓存上限，接受 `2GiB`/`512MiB` 或字节数，`0` 不限制
+3. 再次运行并打开 http://localhost:8086
+
+扫描方式（定时间隔 / 每日定时 / 监控目录）与缓存上限都可在「设置」页在线调整；设置页保存过的值优先于配置文件。把新漫画放进库目录，下次扫描后就会出现。
 
 把新漫画放进库目录，下次扫描后就会出现（重启时立即生效）。
 
@@ -25,6 +27,7 @@
 - 每本漫画可设作者、0–5★ 评分、自由文本标签
 - 按名称搜索；按标签和最低评分筛选
 - 标签管理页（重命名 / 删除 / 计数）
+- 设置页在线管理：库路径、扫描方式、磁盘缓存上限（保存即生效，无需重启）
 
 ## 构建
 ```bash
@@ -35,7 +38,7 @@ go build -o tefnut ./cmd/tefnut
 
 ### 一键启动（推荐）
 
-在一个空目录里执行 —— 它会在当前目录生成 `docker-compose.yml` 并启动：
+在一个空目录里执行 —— 它会在当前目录生成 `docker-compose.yml` 和 `config/config.yaml` 并启动：
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Aki-Liang/Tefnut/main/rainmaker | bash
@@ -67,11 +70,10 @@ TEFNUT_CACHE_MAX_BYTES=4GiB TEFNUT_THUMB_PAGES_MAX_BYTES=1GiB \
 - `/data`（命名卷 `tefnut-data`）— SQLite 数据库、缩略图、页面缓存，容器重建后仍保留；容器以非-root 用户运行，命名卷权限自动就绪。
 - `8086` — Web 端口（在生成的 `docker-compose.yml` 里可改端口映射）。
 - `TZ` — 定时扫描按此时区触发（如 `Asia/Shanghai`）。
-
-> **从旧版本升级**：镜像的配置路径已从 `/etc/tefnut/config.yaml` 迁移到 `/config/config.yaml`。若你此前把自定义配置挂载到 `/etc/tefnut/config.yaml`，请把它移到 `./config/config.yaml` 并挂载 `./config:/config`；仅用 rainmaker/环境变量的部署无需处理。
-
 - `TEFNUT_CACHE_MAX_BYTES` — 解压缓存（`/data/cache`）上限，默认 `2GiB`；接受字节数或 `512MiB`/`2GiB` 写法，`0` 为不限制。每次扫描后按最旧优先整本淘汰。设置页保存过的值优先于 env 与配置文件。
 - `TEFNUT_THUMB_PAGES_MAX_BYTES` — 页缩略图（`/data/thumbs/pages`）上限，默认 `512MiB`，规则同上。设置页保存过的值优先于 env 与配置文件。
+
+> **从旧版本升级**：镜像的配置路径已从 `/etc/tefnut/config.yaml` 迁移到 `/config/config.yaml`。若你此前把自定义配置挂载到 `/etc/tefnut/config.yaml`，请把它移到 `./config/config.yaml` 并挂载 `./config:/config`；仅用 rainmaker/环境变量的部署无需处理。
 
 **从源码构建**（不拉镜像）：`git clone` 后本地构建并打上镜像 tag，`rainmaker` 便会直接用本地镜像：
 

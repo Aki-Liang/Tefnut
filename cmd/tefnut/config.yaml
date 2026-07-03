@@ -1,9 +1,13 @@
+# 本地开发配置。扫描方式在「设置」页调整（DB 存储，yaml 不再承载）。
+# 缓存上限也可在设置页修改；设置页保存过的值优先于本文件。
 library:
   rootPath: "./COMIC"
 dataDir: "./data"
 server:
   addr: ":8086"
-scan:
-  interval: "1h"
 thumbnail:
-  width: 400
+  width: 400 # 封面宽度（像素）
+  pageWidth: 120 # 页缩略图宽度（像素）
+  pagesMaxBytes: 512MiB # 页缩略图缓存上限；0 = 不限制
+cache:
+  maxBytes: 2GiB # 解压缓存上限；0 = 不限制
