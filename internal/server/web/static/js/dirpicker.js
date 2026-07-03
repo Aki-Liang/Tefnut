@@ -62,7 +62,9 @@
     cancel.addEventListener('click', hide);
     overlay.addEventListener('click', (e) => { if (e.target === overlay) hide(); });
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !overlay.hidden) hide();
+      // an Escape (or Enter below) that ends an IME composition must not
+      // count as a modal command — Chinese dir names are typed via IME here
+      if (e.key === 'Escape' && !e.isComposing && !overlay.hidden) hide();
     });
     confirm.addEventListener('click', () => {
       if (!current) return;
@@ -76,7 +78,7 @@
     });
     go.addEventListener('click', () => { if (jump.value.trim()) loadDir(jump.value.trim()); });
     jump.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') { e.preventDefault(); if (jump.value.trim()) loadDir(jump.value.trim()); }
+      if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (jump.value.trim()) loadDir(jump.value.trim()); }
     });
     list.addEventListener('click', (e) => {
       const li = e.target.closest('li[data-path]');
@@ -142,7 +144,10 @@
         els.jump.value = '';
         renderList(data.dirs, true);
       })
-      .catch((e) => setError(e.message));
+      // keep confirm in sync with current: a failed jump from a valid dir
+      // leaves the view (and confirm) intact, but a failed auto-enter on
+      // open has no selectable dir yet
+      .catch((e) => { setError(e.message); els.confirm.disabled = !current; });
   }
 
   window.openDirPicker = function (cb) {
