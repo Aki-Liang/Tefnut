@@ -30,19 +30,27 @@ function syncModeArgs() {
 document.querySelectorAll('input[name="mode"]').forEach(r => r.addEventListener('change', syncModeArgs));
 syncModeArgs();
 
-// auto-fill name from path basename
-document.getElementById('np-path').addEventListener('input', (e) => {
-  const nameEl = document.getElementById('np-name');
-  if (!nameEl.dataset.touched) {
-    const parts = e.target.value.replace(/\/+$/, '').split('/');
-    nameEl.value = parts[parts.length - 1] || '';
-  }
+// pick a library directory via the server-side dir picker modal; the picked
+// path lands on the trigger button, and the display name auto-fills from the
+// basename unless the user already edited it.
+const pickBtn = document.getElementById('np-pick');
+pickBtn.addEventListener('click', () => {
+  window.openDirPicker((path) => {
+    pickBtn.dataset.path = path;
+    pickBtn.textContent = path;
+    pickBtn.classList.remove('empty');
+    const nameEl = document.getElementById('np-name');
+    if (!nameEl.dataset.touched) {
+      const parts = path.replace(/\/+$/, '').split('/');
+      nameEl.value = parts[parts.length - 1] || '';
+    }
+  });
 });
 document.getElementById('np-name').addEventListener('input', (e) => { e.target.dataset.touched = '1'; });
 
 document.getElementById('addpath').addEventListener('submit', (e) => {
   e.preventDefault();
-  const path = document.getElementById('np-path').value.trim();
+  const path = (pickBtn.dataset.path || '').trim();
   const name = document.getElementById('np-name').value.trim();
   if (!path) return;
   fetch('/api/settings/paths', {

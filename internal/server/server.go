@@ -89,6 +89,7 @@ func (s *Server) Register(e *echo.Echo) {
 
 	api.GET("/settings", s.apiGetSettings)
 	api.PUT("/settings", s.apiUpdateSettings)
+	api.GET("/fs/dirs", s.apiFsDirs)
 	api.POST("/settings/paths", s.apiAddPath)
 	api.DELETE("/settings/paths/:id", s.apiDeletePath)
 
