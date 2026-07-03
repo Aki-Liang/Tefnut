@@ -21,7 +21,7 @@ func main() {
 	cfgPath := flag.String("config", "./config.yaml", "path to config.yaml")
 	flag.Parse()
 
-	cfg, err := config.Load(*cfgPath)
+	cfg, err := config.LoadOrInit(*cfgPath)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -49,15 +49,17 @@ func main() {
 	scanner := library.NewScanner(nodes, pathRepo, cfg.DataDir, cfg.Thumbnail.Width)
 
 	manager := scan.New(scanner, settingsRepo, pathRepo, cfg.DataDir, scan.Budgets{
-		ExtractCacheBytes: cfg.Cache.MaxBytes,
-		PageThumbBytes:    cfg.Thumbnail.PagesMaxBytes,
+		ExtractCacheBytes: int64(cfg.Cache.MaxBytes),
+		PageThumbBytes:    int64(cfg.Thumbnail.PagesMaxBytes),
 	})
 	if err := manager.Start(context.Background()); err != nil {
 		log.Printf("scan manager start: %v", err)
 	}
 	defer manager.Stop()
 
-	srv := server.NewServer(nodes, tags, progress, settingsRepo, pathRepo, manager, cfg.DataDir, cfg.Thumbnail.Width, cfg.Thumbnail.PageWidth, cfg.Library.AllowedRoots)
+	srv := server.NewServer(nodes, tags, progress, settingsRepo, pathRepo, manager,
+		cfg.DataDir, cfg.Thumbnail.Width, cfg.Thumbnail.PageWidth, cfg.Library.AllowedRoots,
+		int64(cfg.Cache.MaxBytes), int64(cfg.Thumbnail.PagesMaxBytes))
 
 	e := echo.New()
 	e.HideBanner = true

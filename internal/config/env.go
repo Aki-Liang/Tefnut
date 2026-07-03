@@ -24,14 +24,14 @@ func (c *Config) applyEnv() error {
 		if err != nil {
 			return fmt.Errorf("config: %s: %w", envCacheMax, err)
 		}
-		c.Cache.MaxBytes = n
+		c.Cache.MaxBytes = ByteSize(n)
 	}
 	if v, ok := os.LookupEnv(envPageThumbsMax); ok {
 		n, err := parseSize(v)
 		if err != nil {
 			return fmt.Errorf("config: %s: %w", envPageThumbsMax, err)
 		}
-		c.Thumbnail.PagesMaxBytes = n
+		c.Thumbnail.PagesMaxBytes = ByteSize(n)
 	}
 	return nil
 }

@@ -76,8 +76,32 @@ ask_size() { # $1 prompt-label  $2 default -> answer on stdout
     { [ -z "$TTY" ] || [ "$v" = "$2" ]; } && exit 1
   done
 }
-CACHE_MAX="$(ask_size '解压缓存上限（漫画页缓存）' "${TEFNUT_CACHE_MAX_BYTES:-2GiB}")"
-PTHUMB_MAX="$(ask_size '页缩略图缓存上限' "${TEFNUT_THUMB_PAGES_MAX_BYTES:-512MiB}")"
+# --- config dir: ./config/config.yaml, mounted at /config ---
+CONFIG_DIR="config"
+CONFIG_FILE="$CONFIG_DIR/config.yaml"
+if [ -f "$CONFIG_FILE" ]; then
+  info "检测到已有 ${CONFIG_FILE}，沿用其中配置（缓存上限以该文件/设置页为准）。"
+else
+  CACHE_MAX="$(ask_size '解压缓存上限（漫画页缓存）' "${TEFNUT_CACHE_MAX_BYTES:-2GiB}")"
+  PTHUMB_MAX="$(ask_size '页缩略图缓存上限' "${TEFNUT_THUMB_PAGES_MAX_BYTES:-512MiB}")"
+  mkdir -p "$CONFIG_DIR"
+  {
+    printf '# Tefnut 配置文件。修改后 docker compose restart 生效。\n'
+    printf '# 缓存上限也可在 Web 设置页修改；设置页保存过的值优先于本文件。\n'
+    printf 'library:\n'
+    printf '  rootPath: /comics\n'
+    printf 'dataDir: /data\n'
+    printf 'server:\n'
+    printf '  addr: ":8086"\n'
+    printf 'thumbnail:\n'
+    printf '  width: 400\n'
+    printf '  pageWidth: 120\n'
+    printf '  pagesMaxBytes: %s # 页缩略图缓存上限；0 = 不限制\n' "$PTHUMB_MAX"
+    printf 'cache:\n'
+    printf '  maxBytes: %s # 解压缓存上限；0 = 不限制\n' "$CACHE_MAX"
+  } >"$CONFIG_FILE"
+  info "已生成 $(pwd)/$CONFIG_FILE"
+fi
 
 # --- generate docker-compose.yml (values baked in) ---
 # printf (not a heredoc) so the user-supplied path/TZ are written literally
@@ -90,12 +114,11 @@ PTHUMB_MAX="$(ask_size '页缩略图缓存上限' "${TEFNUT_THUMB_PAGES_MAX_BYTE
   printf '    ports:\n'
   printf '      - "%s:8086"\n' "$PORT"
   printf '    volumes:\n'
+  printf '      - ./%s:/config\n' "$CONFIG_DIR"
   printf '      - %s:/comics:ro\n' "$COMICS_PATH"
   printf '      - tefnut-data:/data\n'
   printf '    environment:\n'
   printf '      - TZ=%s\n' "$TZ_VAL"
-  printf '      - TEFNUT_CACHE_MAX_BYTES=%s\n' "$CACHE_MAX"
-  printf '      - TEFNUT_THUMB_PAGES_MAX_BYTES=%s\n' "$PTHUMB_MAX"
   printf '    restart: unless-stopped\n'
   printf 'volumes:\n'
   printf '  tefnut-data:\n'
