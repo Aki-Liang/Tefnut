@@ -2,10 +2,8 @@ package scan
 
 import (
 	"context"
-	"io/fs"
 	"log"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -53,19 +51,11 @@ func (m *Manager) startWatchLocked(ctx context.Context) error {
 		return err
 	}
 	addTree := func(root string) {
-		if err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return nil
+		walkDirsFollowingSymlinks(root, func(dir string) {
+			if err := w.Add(dir); err != nil {
+				log.Printf("scan: watch add %s: %v", dir, err)
 			}
-			if d.IsDir() {
-				if aerr := w.Add(p); aerr != nil {
-					log.Printf("scan: watch add %s: %v", p, aerr)
-				}
-			}
-			return nil
-		}); err != nil {
-			log.Printf("scan: walk %s: %v", root, err)
-		}
+		})
 	}
 	for _, lib := range libs {
 		addTree(lib.Path)

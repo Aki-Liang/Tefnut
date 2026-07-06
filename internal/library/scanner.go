@@ -88,7 +88,13 @@ func (s *Scanner) Scan(ctx context.Context) error {
 			log.Printf("scanner: library path %s unavailable: %v", abs, err)
 			continue
 		}
-		if err := s.scanDir(ctx, abs, node.ID, &builds); err != nil {
+		realRoot, err := filepath.EvalSymlinks(abs)
+		if err != nil {
+			log.Printf("scanner: resolve library path %s: %v", abs, err)
+			continue
+		}
+		onPath := map[string]bool{realRoot: true}
+		if err := s.scanDir(ctx, abs, node.ID, &builds, realRoot, onPath); err != nil {
 			log.Printf("scanner: scan library %s: %v", abs, err)
 		}
 	}
@@ -100,7 +106,13 @@ func (s *Scanner) Scan(ctx context.Context) error {
 	return nil
 }
 
-func (s *Scanner) scanDir(ctx context.Context, dir string, parentID int64, builds *[]buildTask) error {
+// scanDir syncs one directory level. realDir is dir with all symlinks
+// resolved; onPath holds the resolved path of every directory on the current
+// recursion chain, so a directory symlink pointing back at an ancestor is
+// skipped instead of recursed into forever. Non-ancestor repeats are allowed
+// on purpose: two links to the same directory are two library entries, each
+// scanned with its own nodes.
+func (s *Scanner) scanDir(ctx context.Context, dir string, parentID int64, builds *[]buildTask, realDir string, onPath map[string]bool) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return fmt.Errorf("scanner: read dir %s: %w", dir, err)
@@ -117,14 +129,38 @@ func (s *Scanner) scanDir(ctx context.Context, dir string, parentID int64, build
 
 	for _, e := range entries {
 		p := filepath.Join(dir, e.Name())
-		isDir := e.IsDir()
-		if !isDir && !archive.IsComic(e.Name()) {
+		isLink := e.Type()&os.ModeSymlink != 0
+		if !isLink && !e.IsDir() && !archive.IsComic(e.Name()) {
 			continue
 		}
-		info, err := e.Info()
+		// Follow symlinks: classify by the target so linked dirs recurse, and
+		// take size/mtime from the target so change detection sees updates.
+		var info os.FileInfo
+		var err error
+		if isLink {
+			info, err = os.Stat(p)
+		} else {
+			info, err = e.Info()
+		}
 		if err != nil {
 			log.Printf("scanner: stat %s: %v", p, err)
 			continue
+		}
+		isDir := info.IsDir()
+		if !isDir && !archive.IsComic(e.Name()) {
+			continue
+		}
+		realChild := filepath.Join(realDir, e.Name())
+		if isDir && isLink {
+			realChild, err = filepath.EvalSymlinks(p)
+			if err != nil {
+				log.Printf("scanner: resolve symlink %s: %v", p, err)
+				continue
+			}
+			if onPath[realChild] {
+				log.Printf("scanner: symlink loop %s -> %s; skipping", p, realChild)
+				continue
+			}
 		}
 
 		node, seen := byPath[p]
@@ -146,7 +182,10 @@ func (s *Scanner) scanDir(ctx context.Context, dir string, parentID int64, build
 		}
 
 		if isDir {
-			if err := s.scanDir(ctx, p, node.ID, builds); err != nil {
+			onPath[realChild] = true
+			err := s.scanDir(ctx, p, node.ID, builds, realChild, onPath)
+			delete(onPath, realChild)
+			if err != nil {
 				log.Printf("scanner: recurse %s: %v", p, err)
 			}
 			continue
